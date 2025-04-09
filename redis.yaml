@@ -1,0 +1,12 @@
+# 配置 Redis 服务器信息
+Redis:
+  Address: 127.0.0.1
+  Port: 6379
+
+# 配置 Log 信息
+Log:
+  Stdout: on
+  File: on
+  Filename: redis.log
+  Color:  off
+  Level:  Info
