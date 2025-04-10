@@ -1,0 +1,1 @@
+[2025-04-10 18:29:06]	[FATAL]	[logger/logger.go:118]	error: %!(EXTRA string=listen tcp: address 127.0.0.18080: missing port in address)
