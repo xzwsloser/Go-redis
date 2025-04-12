@@ -106,22 +106,22 @@ func (b *BulkReply) ToByte() []byte {
 
 // MulitBulkReply is the many line reply
 type MulitBulkReply struct {
-	args [][]byte
+	Args [][]byte
 }
 
 func NewMultiReply(args [][]byte) *MulitBulkReply {
 	return &MulitBulkReply{
-		args: args,
+		Args: args,
 	}
 }
 
 func (m *MulitBulkReply) ToByte() []byte {
-	argLen := len(m.args)
+	argLen := len(m.Args)
 	var buf bytes.Buffer
 	buf.WriteString("*")
 	buf.WriteString(strconv.Itoa(argLen))
 	buf.WriteString(CRLF)
-	for _, arg := range m.args {
+	for _, arg := range m.Args {
 		buf.WriteString("$")
 		buf.WriteString(strconv.Itoa(len(arg)))
 		buf.WriteString(CRLF)
@@ -139,4 +139,15 @@ func NewEmptyReply() *EmptyReply {
 
 func (e *EmptyReply) ToByte() []byte {
 	return []byte("*0\r\n")
+}
+
+type UnknownReply struct {
+}
+
+func NewUnknownReply() *UnknownReply {
+	return &UnknownReply{}
+}
+
+func (*UnknownReply) ToByte() []byte {
+	return []byte("-ERR unknow reply" + CRLF)
 }

@@ -4,7 +4,8 @@ import (
 	"context"
 	"github.com/xzwsloser/Go-redis/config"
 	"github.com/xzwsloser/Go-redis/lib/logger"
-	"github.com/xzwsloser/Go-redis/net/handler"
+	handlerInterface "github.com/xzwsloser/Go-redis/net/handler"
+	"github.com/xzwsloser/Go-redis/resp/handler"
 	"net"
 	"os"
 	"os/signal"
@@ -17,7 +18,7 @@ import (
 
 type TcpServer struct {
 	ip          string
-	handler     handler.Handler
+	handler     handlerInterface.Handler
 	closeCh     chan struct{}
 	sigCh       chan os.Signal
 	listener    net.Listener
@@ -32,7 +33,7 @@ func NewTcpServer() *TcpServer {
 	port := config.GetRedisServerConfig().Port
 	server := &TcpServer{
 		ip:          address + ":" + strconv.Itoa(port),
-		handler:     handler.NewEchoHandler(),
+		handler:     handler.NewRespHandler(),
 		closeCh:     make(chan struct{}),
 		sigCh:       make(chan os.Signal, 1),
 		clientCount: 0,
