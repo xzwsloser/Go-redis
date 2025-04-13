@@ -18,6 +18,10 @@ type Database struct {
 	lockMap *lock.Locks
 }
 
+type DataEntity struct {
+	Data any
+}
+
 func NewDatabase() *Database {
 	return &Database{
 		data:    dict.NewConcurrentDict(DEFAULT_HASH_BUCKETS),
@@ -27,53 +31,79 @@ func NewDatabase() *Database {
 
 type ExecFunc func(db *Database, cmdLine [][]byte) redis.Reply
 
-func (db *Database) GetEntity(key string) (value any, exists bool) {
-	value, exists = db.data.Get(key)
+func (db *Database) GetEntity(key string) (entity *DataEntity, exists bool) {
+	value, exists := db.data.Get(key)
+	if !exists {
+		return nil, false
+	}
+
+	entity, ok := value.(*DataEntity)
+	if !ok {
+		return nil, false
+	}
+
+	return entity, true
+}
+
+func (db *Database) GetEntityWithLock(key string) (entity *DataEntity, exists bool) {
+	value, exists := db.data.GetWithLock(key)
+	if !exists {
+		return nil, false
+	}
+
+	entity, ok := value.(*DataEntity)
+	if !ok {
+		return nil, false
+	}
+
+	return entity, true
+}
+
+func (db *Database) PutEntity(key string, entity *DataEntity) (result int) {
+	result = db.data.Put(key, entity)
 	return
 }
 
-func (db *Database) GetEntityWithLock(key string) (value any, exists bool) {
-	value, exists = db.data.GetWithLock(key)
+func (db *Database) PutEntityWithLock(key string, entity *DataEntity) (result int) {
+	result = db.data.PutWithLock(key, entity)
 	return
 }
 
-func (db *Database) PutEntity(key string, value any) (result int) {
-	result = db.data.Put(key, value)
+func (db *Database) PutEntityIfAbsent(key string, entity *DataEntity) (result int) {
+	result = db.data.PutIfAbsent(key, entity)
 	return
 }
 
-func (db *Database) PutEntityWithLock(key string, value any) (result int) {
-	result = db.data.PutWithLock(key, value)
+func (db *Database) PutEntityIfAbsentWithLock(key string, entity *DataEntity) (result int) {
+	result = db.data.PutIfAbsentWithLock(key, entity)
 	return
 }
 
-func (db *Database) PutEntityIfAbsent(key string, value any) (result int) {
-	result = db.data.PutIfAbsent(key, value)
+func (db *Database) PutEntityIfExists(key string, entity *DataEntity) (result int) {
+	result = db.data.PutIfExists(key, entity)
 	return
 }
 
-func (db *Database) PutEntityIfAbsentWithLock(key string, value any) (result int) {
-	result = db.data.PutIfAbsentWithLock(key, value)
+func (db *Database) PutEntityIfExistsWithLock(key string, entity *DataEntity) (result int) {
+	result = db.data.PutIfExistsWithLock(key, entity)
 	return
 }
 
-func (db *Database) PutEntityIfExists(key string, value any) (result int) {
-	result = db.data.PutIfExists(key, value)
+func (db *Database) RemoveEntity(key string) (entity *DataEntity, result int) {
+	value, result := db.data.Remove(key)
+	entity, ok := value.(*DataEntity)
+	if !ok {
+		return nil, 0
+	}
 	return
 }
 
-func (db *Database) PutEntityIfExistsWithLock(key string, value any) (result int) {
-	result = db.data.PutIfExistsWithLock(key, value)
-	return
-}
-
-func (db *Database) RemoveEntity(key string) (value any, result int) {
-	value, result = db.data.Remove(key)
-	return
-}
-
-func (db *Database) RemoveEntityWithLock(key string) (value any, result int) {
-	value, result = db.data.RemoveWithLock(key)
+func (db *Database) RemoveEntityWithLock(key string) (entity *DataEntity, result int) {
+	value, result := db.data.RemoveWithLock(key)
+	entity, ok := value.(*DataEntity)
+	if !ok {
+		return nil, 0
+	}
 	return
 }
 
