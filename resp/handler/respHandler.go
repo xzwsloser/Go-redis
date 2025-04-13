@@ -3,6 +3,7 @@ package handler
 import (
 	"bufio"
 	"context"
+	database2 "github.com/xzwsloser/Go-redis/database"
 	"github.com/xzwsloser/Go-redis/interface/database"
 	"github.com/xzwsloser/Go-redis/interface/redis"
 	"github.com/xzwsloser/Go-redis/lib/logger"
@@ -28,7 +29,9 @@ type RespHandler struct {
 }
 
 func NewRespHandler() *RespHandler {
-	r := &RespHandler{}
+	r := &RespHandler{
+		db: database2.NewRedisServer(),
+	}
 	r.isClosing.Set(false)
 	return r
 }
@@ -65,7 +68,7 @@ func (r *RespHandler) Handle(ctx context.Context, conn net.Conn) {
 		}
 
 		// invoke the db.Exec function
-		if payLoad.Data != nil {
+		if payLoad.Data == nil {
 			logger.Error("respHandler received empty request")
 			errReply := protocol.NewErrReply("empty request")
 			_, _ = client.Write(errReply.ToByte())

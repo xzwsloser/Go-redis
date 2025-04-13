@@ -152,6 +152,22 @@ func (d *ConcurrentDict) Get(key string) (value any, exists bool) {
 	return nil, false
 }
 
+func (d *ConcurrentDict) GetWithLock(key string) (value any, exists bool) {
+	if d == nil {
+		panic("dict is nil")
+	}
+
+	s := d.getShard(key)
+	if s == nil {
+		return nil, false
+	}
+
+	if value, ok := s.m[key]; ok {
+		return value, true
+	}
+	return nil, false
+}
+
 func (d *ConcurrentDict) Len() int {
 	if d == nil {
 		panic("dict is nil")
@@ -174,6 +190,20 @@ func (d *ConcurrentDict) Put(key string, value any) (result int) {
 	return 0
 }
 
+func (d *ConcurrentDict) PutWithLock(key string, value any) (result int) {
+	if d == nil {
+		panic("dict is nil")
+	}
+
+	s := d.getShard(key)
+	if s != nil {
+		s.m[key] = value
+		d.addCount()
+		return 1
+	}
+	return 0
+}
+
 func (d *ConcurrentDict) PutIfAbsent(key string, value any) (result int) {
 	if d == nil {
 		panic("dict is nil")
@@ -182,6 +212,23 @@ func (d *ConcurrentDict) PutIfAbsent(key string, value any) (result int) {
 	if s != nil {
 		s.lock.Lock()
 		defer s.lock.Unlock()
+		if _, exists := s.m[key]; exists {
+			return 0
+		}
+		s.m[key] = value
+		d.addCount()
+		return 1
+	}
+	return 0
+}
+
+func (d *ConcurrentDict) PutIfAbsentWithLock(key string, value any) (result int) {
+	if d == nil {
+		panic("dict is nil")
+	}
+
+	s := d.getShard(key)
+	if s != nil {
 		if _, exists := s.m[key]; exists {
 			return 0
 		}
@@ -210,6 +257,23 @@ func (d *ConcurrentDict) PutIfExists(key string, value any) (result int) {
 	return 0
 }
 
+func (d *ConcurrentDict) PutIfExistsWithLock(key string, value any) (result int) {
+	if d == nil {
+		panic("dict is nil")
+	}
+
+	s := d.getShard(key)
+	if s != nil {
+		if _, exists := s.m[key]; !exists {
+			return 0
+		}
+		s.m[key] = value
+		d.addCount()
+		return 1
+	}
+	return 0
+}
+
 func (d *ConcurrentDict) Remove(key string) (value any, result int) {
 	if d == nil {
 		panic("dict is nil")
@@ -227,6 +291,25 @@ func (d *ConcurrentDict) Remove(key string) (value any, result int) {
 		return val, 1
 	}
 	return nil, 0
+}
+
+func (d *ConcurrentDict) RemoveWithLock(key string) (value any, result int) {
+	if d == nil {
+		panic("dict is nil")
+	}
+
+	s := d.getShard(key)
+	if s != nil {
+		if _, exists := s.m[key]; !exists {
+			return nil, 0
+		}
+		val := s.m[key]
+		delete(s.m, key)
+		d.decreaseCount()
+		return val, 1
+	}
+	return nil, 0
+
 }
 
 func (d *ConcurrentDict) ForEach(consumer Consumer) {

@@ -47678,3 +47678,67 @@
 [2025-04-11 10:02:43]	[ERROR]	[logger/logger.go:111]	parse0 IO Err: EOF
 [2025-04-11 10:03:26]	[ERROR]	[logger/logger.go:111]	parse0 IO Err: EOF
 [2025-04-11 10:03:37]	[ERROR]	[logger/logger.go:111]	parse0 IO Err: EOF
+[2025-04-13 11:00:43]	[ERROR]	[logger/logger.go:111]	respHandler received empty request
+[2025-04-13 11:09:05]	[ERROR]	[logger/logger.go:111]	parse0 readLine Err: Protocol Err: numbe
+[2025-04-13 11:09:05]	[ERROR]	[logger/logger.go:111]	respHandler occur Err: Protocol Err: numbe
+[2025-04-13 11:09:05]	[ERROR]	[logger/logger.go:111]	respHandler occur Err: Protocol Err: r
+
+[2025-04-13 11:09:05]	[ERROR]	[logger/logger.go:111]	parse0 readLine Err: Protocol Err: 22
+*2
+[2025-04-13 11:09:05]	[ERROR]	[logger/logger.go:111]	parse0 err: runtime error: slice bounds out of range [:-1]
+[2025-04-13 11:38:18]	[ERROR]	[logger/logger.go:111]	parse0 IO Err: read tcp 127.0.0.1:8080->127.0.0.1:59964: read: connection reset by peer
+[2025-04-13 11:38:18]	[ERROR]	[logger/logger.go:111]	parse0 IO Err: read tcp 127.0.0.1:8080->127.0.0.1:59828: read: connection reset by peer
+[2025-04-13 11:38:18]	[ERROR]	[logger/logger.go:111]	parse0 IO Err: read tcp 127.0.0.1:8080->127.0.0.1:60052: read: connection reset by peer
+[2025-04-13 11:38:18]	[ERROR]	[logger/logger.go:111]	parse0 IO Err: read tcp 127.0.0.1:8080->127.0.0.1:59898: read: connection reset by peer
+[2025-04-13 11:38:18]	[ERROR]	[logger/logger.go:111]	parse0 IO Err: read tcp 127.0.0.1:8080->127.0.0.1:60082: read: connection reset by peer
+[2025-04-13 11:38:18]	[ERROR]	[logger/logger.go:111]	parse0 IO Err: read tcp 127.0.0.1:8080->127.0.0.1:59990: read: connection reset by peer
+[2025-04-13 11:38:18]	[ERROR]	[logger/logger.go:111]	parse0 IO Err: read tcp 127.0.0.1:8080->127.0.0.1:59780: read: connection reset by peer
+[2025-04-13 11:38:18]	[ERROR]	[logger/logger.go:111]	parse0 IO Err: read tcp 127.0.0.1:8080->127.0.0.1:59896: read: connection reset by peer
+[2025-04-13 11:38:18]	[ERROR]	[logger/logger.go:111]	parse0 IO Err: read tcp 127.0.0.1:8080->127.0.0.1:60122: read: connection reset by peer
+[2025-04-13 11:38:18]	[ERROR]	[logger/logger.go:111]	parse0 IO Err: read tcp 127.0.0.1:8080->127.0.0.1:60066: read: connection reset by peer
+[2025-04-13 11:38:18]	[ERROR]	[logger/logger.go:111]	parse0 IO Err: read tcp 127.0.0.1:8080->127.0.0.1:59832: read: connection reset by peer
+[2025-04-13 11:38:18]	[ERROR]	[logger/logger.go:111]	parse0 IO Err: read tcp 127.0.0.1:8080->127.0.0.1:59866: read: connection reset by peer
+[2025-04-13 11:38:18]	[ERROR]	[logger/logger.go:111]	parse0 IO Err: read tcp 127.0.0.1:8080->127.0.0.1:59882: read: connection reset by peer
+[2025-04-13 11:38:18]	[ERROR]	[logger/logger.go:111]	parse0 IO Err: read tcp 127.0.0.1:8080->127.0.0.1:59682: read: connection reset by peer
+[2025-04-13 11:38:18]	[ERROR]	[logger/logger.go:111]	parse0 IO Err: read tcp 127.0.0.1:8080->127.0.0.1:60012: read: connection reset by peer
+[2025-04-13 11:38:18]	[ERROR]	[logger/logger.go:111]	parse0 IO Err: read tcp 127.0.0.1:8080->127.0.0.1:59852: read: connection reset by peer
+[2025-04-13 11:38:18]	[ERROR]	[logger/logger.go:111]	parse0 IO Err: read tcp 127.0.0.1:8080->127.0.0.1:59756: read: connection reset by peer
+[2025-04-13 11:38:18]	[ERROR]	[logger/logger.go:111]	parse0 IO Err: read tcp 127.0.0.1:8080->127.0.0.1:59940: read: connection reset by peer
+[2025-04-13 11:38:18]	[ERROR]	[logger/logger.go:111]	parse0 IO Err: read tcp 127.0.0.1:8080->127.0.0.1:60014: read: connection reset by peer
+[2025-04-13 11:38:18]	[ERROR]	[logger/logger.go:111]	parse0 IO Err: read tcp 127.0.0.1:8080->127.0.0.1:59700: read: connection reset by peer
+[2025-04-13 11:38:18]	[ERROR]	[logger/logger.go:111]	parse0 IO Err: read tcp 127.0.0.1:8080->127.0.0.1:59752: read: connection reset by peer
+[2025-04-13 11:39:59]	[ERROR]	[logger/logger.go:111]	parse0 IO Err: read tcp 127.0.0.1:8080->127.0.0.1:42252: read: connection reset by peer
+[2025-04-13 11:39:59]	[ERROR]	[logger/logger.go:111]	parse0 IO Err: read tcp 127.0.0.1:8080->127.0.0.1:42086: read: connection reset by peer
+[2025-04-13 11:39:59]	[ERROR]	[logger/logger.go:111]	parse0 IO Err: read tcp 127.0.0.1:8080->127.0.0.1:42012: read: connection reset by peer
+[2025-04-13 11:39:59]	[ERROR]	[logger/logger.go:111]	parse0 IO Err: read tcp 127.0.0.1:8080->127.0.0.1:42218: read: connection reset by peer
+[2025-04-13 11:39:59]	[ERROR]	[logger/logger.go:111]	parse0 IO Err: read tcp 127.0.0.1:8080->127.0.0.1:41914: read: connection reset by peer
+[2025-04-13 11:39:59]	[ERROR]	[logger/logger.go:111]	parse0 IO Err: read tcp 127.0.0.1:8080->127.0.0.1:42284: read: connection reset by peer
+[2025-04-13 11:39:59]	[ERROR]	[logger/logger.go:111]	parse0 IO Err: read tcp 127.0.0.1:8080->127.0.0.1:41938: read: connection reset by peer
+[2025-04-13 11:39:59]	[ERROR]	[logger/logger.go:111]	parse0 IO Err: read tcp 127.0.0.1:8080->127.0.0.1:42146: read: connection reset by peer
+[2025-04-13 11:39:59]	[ERROR]	[logger/logger.go:111]	parse0 IO Err: read tcp 127.0.0.1:8080->127.0.0.1:42210: read: connection reset by peer
+[2025-04-13 11:39:59]	[ERROR]	[logger/logger.go:111]	parse0 IO Err: read tcp 127.0.0.1:8080->127.0.0.1:42102: read: connection reset by peer
+[2025-04-13 11:39:59]	[ERROR]	[logger/logger.go:111]	parse0 IO Err: read tcp 127.0.0.1:8080->127.0.0.1:41928: read: connection reset by peer
+[2025-04-13 11:39:59]	[ERROR]	[logger/logger.go:111]	parse0 IO Err: read tcp 127.0.0.1:8080->127.0.0.1:42048: read: connection reset by peer
+[2025-04-13 11:39:59]	[ERROR]	[logger/logger.go:111]	parse0 IO Err: read tcp 127.0.0.1:8080->127.0.0.1:41936: read: connection reset by peer
+[2025-04-13 11:39:59]	[ERROR]	[logger/logger.go:111]	parse0 IO Err: read tcp 127.0.0.1:8080->127.0.0.1:42076: read: connection reset by peer
+[2025-04-13 11:39:59]	[ERROR]	[logger/logger.go:111]	parse0 IO Err: read tcp 127.0.0.1:8080->127.0.0.1:42126: read: connection reset by peer
+[2025-04-13 11:39:59]	[ERROR]	[logger/logger.go:111]	parse0 IO Err: read tcp 127.0.0.1:8080->127.0.0.1:42202: read: connection reset by peer
+[2025-04-13 11:39:59]	[ERROR]	[logger/logger.go:111]	parse0 IO Err: read tcp 127.0.0.1:8080->127.0.0.1:42020: read: connection reset by peer
+[2025-04-13 11:39:59]	[ERROR]	[logger/logger.go:111]	parse0 IO Err: read tcp 127.0.0.1:8080->127.0.0.1:42254: read: connection reset by peer
+[2025-04-13 11:39:59]	[ERROR]	[logger/logger.go:111]	parse0 IO Err: read tcp 127.0.0.1:8080->127.0.0.1:42114: read: connection reset by peer
+[2025-04-13 11:39:59]	[ERROR]	[logger/logger.go:111]	parse0 IO Err: read tcp 127.0.0.1:8080->127.0.0.1:42138: read: connection reset by peer
+[2025-04-13 11:39:59]	[ERROR]	[logger/logger.go:111]	parse0 IO Err: read tcp 127.0.0.1:8080->127.0.0.1:42000: read: connection reset by peer
+[2025-04-13 11:39:59]	[ERROR]	[logger/logger.go:111]	parse0 IO Err: read tcp 127.0.0.1:8080->127.0.0.1:42304: read: connection reset by peer
+[2025-04-13 11:39:59]	[ERROR]	[logger/logger.go:111]	parse0 IO Err: read tcp 127.0.0.1:8080->127.0.0.1:42272: read: connection reset by peer
+[2025-04-13 11:39:59]	[ERROR]	[logger/logger.go:111]	parse0 IO Err: read tcp 127.0.0.1:8080->127.0.0.1:42196: read: connection reset by peer
+[2025-04-13 11:39:59]	[ERROR]	[logger/logger.go:111]	parse0 IO Err: read tcp 127.0.0.1:8080->127.0.0.1:42156: read: connection reset by peer
+[2025-04-13 11:39:59]	[ERROR]	[logger/logger.go:111]	parse0 IO Err: read tcp 127.0.0.1:8080->127.0.0.1:42248: read: connection reset by peer
+[2025-04-13 11:39:59]	[ERROR]	[logger/logger.go:111]	parse0 IO Err: read tcp 127.0.0.1:8080->127.0.0.1:41930: read: connection reset by peer
+[2025-04-13 11:39:59]	[ERROR]	[logger/logger.go:111]	parse0 IO Err: read tcp 127.0.0.1:8080->127.0.0.1:42046: read: connection reset by peer
+[2025-04-13 11:39:59]	[ERROR]	[logger/logger.go:111]	parse0 IO Err: read tcp 127.0.0.1:8080->127.0.0.1:42170: read: connection reset by peer
+[2025-04-13 11:39:59]	[ERROR]	[logger/logger.go:111]	parse0 IO Err: read tcp 127.0.0.1:8080->127.0.0.1:42242: read: connection reset by peer
+[2025-04-13 11:39:59]	[ERROR]	[logger/logger.go:111]	parse0 IO Err: read tcp 127.0.0.1:8080->127.0.0.1:41842: read: connection reset by peer
+[2025-04-13 11:39:59]	[ERROR]	[logger/logger.go:111]	parse0 IO Err: read tcp 127.0.0.1:8080->127.0.0.1:42326: read: connection reset by peer
+[2025-04-13 11:39:59]	[ERROR]	[logger/logger.go:111]	parse0 IO Err: read tcp 127.0.0.1:8080->127.0.0.1:41874: read: connection reset by peer
+[2025-04-13 11:46:24]	[INFO]	[logger/logger.go:99]	tcp server is closing ...
+[2025-04-13 11:46:24]	[ERROR]	[logger/logger.go:111]	parse0 IO Err: read tcp 127.0.0.1:8080->127.0.0.1:50994: use of closed network connection

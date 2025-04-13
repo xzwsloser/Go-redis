@@ -5,4 +5,6 @@ type Conn interface {
 	Write([]byte) (int, error)
 	Close() error
 	RemoteAddr() string
+	GetDBIndex() int
+	SelectDB(int)
 }

@@ -2,7 +2,7 @@ package database
 
 import "strings"
 
-var commandTable map[string]*command
+var commandTable map[string]*command = make(map[string]*command)
 
 // command is the wrap of the maps between of command name of callback function
 type command struct {

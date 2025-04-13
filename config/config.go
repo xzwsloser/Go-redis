@@ -17,6 +17,10 @@ type LogConfig struct {
 	Level    string `yaml:"Level"`
 }
 
+type DBConfig struct {
+	Number int `yaml:"Number"`
+}
+
 func init() {
 	InitConfig()
 }
@@ -24,6 +28,7 @@ func init() {
 var (
 	redisServerConfig *RedisServerConfig = new(RedisServerConfig)
 	logConfig         *LogConfig         = new(LogConfig)
+	dbConfig          *DBConfig          = new(DBConfig)
 )
 
 func GetRedisServerConfig() *RedisServerConfig {
@@ -32,6 +37,10 @@ func GetRedisServerConfig() *RedisServerConfig {
 
 func GetLogConfig() *LogConfig {
 	return logConfig
+}
+
+func GetDBConfig() *DBConfig {
+	return dbConfig
 }
 
 func InitConfig() {
@@ -51,6 +60,11 @@ func InitConfig() {
 	}
 
 	err = viper.UnmarshalKey("Log", logConfig)
+	if err != nil {
+		panic(err)
+	}
+
+	err = viper.UnmarshalKey("DB", dbConfig)
 	if err != nil {
 		panic(err)
 	}

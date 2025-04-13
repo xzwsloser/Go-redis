@@ -16,6 +16,14 @@ type Connection struct {
 	selectDBIndex int
 }
 
+func (c *Connection) GetDBIndex() int {
+	return c.selectDBIndex
+}
+
+func (c *Connection) SelectDB(dbIndex int) {
+	c.selectDBIndex = dbIndex
+}
+
 func NewConnection(conn net.Conn) *Connection {
 	return &Connection{
 		conn: conn,

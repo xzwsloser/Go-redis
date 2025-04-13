@@ -10,3 +10,7 @@ Log:
   Filename: redis.log
   Color:  off
   Level:  Info
+
+# 配置数据库信息
+DB:
+  Number: 16
