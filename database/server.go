@@ -2,6 +2,7 @@ package database
 
 import (
 	"errors"
+	"github.com/xzwsloser/Go-redis/aof"
 	"github.com/xzwsloser/Go-redis/config"
 	"github.com/xzwsloser/Go-redis/interface/redis"
 	"github.com/xzwsloser/Go-redis/resp/protocol"
@@ -20,7 +21,8 @@ const (
 
 // RedisServer is the inner server to exec command  like the httpServer
 type RedisServer struct {
-	dbSet []*atomic.Value
+	dbSet     []*atomic.Value
+	persister *aof.Persister
 }
 
 func init() {
@@ -41,6 +43,11 @@ func NewRedisServer() *RedisServer {
 
 	server := &RedisServer{
 		dbSet: dbSet,
+	}
+
+	persister := aof.NewPersister()
+	if persister != nil {
+		server.bindPersister(persister)
 	}
 	return server
 }
@@ -87,7 +94,9 @@ func (r *RedisServer) Exec(conn redis.Conn, cmdLine [][]byte) redis.Reply {
 }
 
 func (r *RedisServer) Close() {
-
+	if r.persister != nil {
+		r.persister.Close()
+	}
 }
 
 func (r *RedisServer) AfterClientClose(conn redis.Conn) {

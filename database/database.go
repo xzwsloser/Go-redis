@@ -16,6 +16,7 @@ type Database struct {
 	index   int
 	data    dict.Dict
 	lockMap *lock.Locks
+	addAof  func(cmdLine [][]byte)
 }
 
 type DataEntity struct {

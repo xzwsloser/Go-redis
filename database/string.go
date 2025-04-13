@@ -2,6 +2,7 @@ package database
 
 import (
 	"github.com/xzwsloser/Go-redis/interface/redis"
+	"github.com/xzwsloser/Go-redis/lib/utils"
 	"github.com/xzwsloser/Go-redis/resp/protocol"
 	"strconv"
 )
@@ -102,6 +103,7 @@ func execSet(db *Database, cmdLine [][]byte) redis.Reply {
 	result := db.PutEntity(key, &DataEntity{
 		Data: value,
 	})
+	db.addAof(utils.CmdLine2("SET", cmdLine))
 	return protocol.NewIntReply(int64(result))
 }
 
@@ -112,6 +114,7 @@ func execSetNx(db *Database, cmdLine [][]byte) redis.Reply {
 	result := db.PutEntity(key, &DataEntity{
 		Data: []byte(value),
 	})
+	db.addAof(utils.CmdLine2("SETNX", cmdLine))
 	return protocol.NewIntReply(int64(result))
 }
 
@@ -129,6 +132,7 @@ func execGetSet(db *Database, cmdLine [][]byte) redis.Reply {
 	_ = db.PutEntityIfExistsWithLock(key, &DataEntity{
 		Data: []byte(value),
 	})
+	db.addAof(utils.CmdLine2("SET", cmdLine))
 	return protocol.NewBulkReply([]byte(result))
 }
 
@@ -138,6 +142,7 @@ func execDel(db *Database, cmdLine [][]byte) redis.Reply {
 	for _, key := range keys {
 		db.RemoveEntity(key)
 	}
+	db.addAof(utils.CmdLine2("DEL", cmdLine))
 	return protocol.NewOkReply()
 }
 
@@ -159,6 +164,7 @@ func execIncr(db *Database, cmdLine [][]byte) redis.Reply {
 	_ = db.PutEntity(key, &DataEntity{
 		Data: []byte(valueStr),
 	})
+	db.addAof(utils.CmdLine2("Incr", cmdLine))
 	return protocol.NewIntReply(1)
 }
 
@@ -180,6 +186,7 @@ func execDecr(db *Database, cmdLine [][]byte) redis.Reply {
 	_ = db.PutEntity(key, &DataEntity{
 		Data: []byte(valueStr),
 	})
+	db.addAof(utils.CmdLine2("Decr", cmdLine))
 	return protocol.NewIntReply(1)
 }
 
@@ -241,6 +248,6 @@ func execMSet(db *Database, cmdLine [][]byte) redis.Reply {
 			Data: []byte(values[index]),
 		})
 	}
-
+	db.addAof(utils.CmdLine2("MSET", cmdLine))
 	return protocol.NewIntReply(int64(result))
 }

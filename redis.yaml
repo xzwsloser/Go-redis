@@ -14,3 +14,9 @@ Log:
 # 配置数据库信息
 DB:
   Number: 16
+
+# 配置 Aof 相关信息
+Aof:
+  AppendOnly: on
+  AppendFileName: appendonly.aof
+  AppendFileSync: always

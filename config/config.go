@@ -21,6 +21,12 @@ type DBConfig struct {
 	Number int `yaml:"Number"`
 }
 
+type AofConfig struct {
+	AppendOnly     string `yaml:"AppendOnly"`
+	AppendFileName string `yaml:"AppendFileName"`
+	AppendFileSync string `yaml:"AppendFileSync"`
+}
+
 func init() {
 	InitConfig()
 }
@@ -29,6 +35,7 @@ var (
 	redisServerConfig *RedisServerConfig = new(RedisServerConfig)
 	logConfig         *LogConfig         = new(LogConfig)
 	dbConfig          *DBConfig          = new(DBConfig)
+	aofConfig         *AofConfig         = new(AofConfig)
 )
 
 func GetRedisServerConfig() *RedisServerConfig {
@@ -41,6 +48,10 @@ func GetLogConfig() *LogConfig {
 
 func GetDBConfig() *DBConfig {
 	return dbConfig
+}
+
+func GetAofConfig() *AofConfig {
+	return aofConfig
 }
 
 func InitConfig() {
@@ -65,6 +76,11 @@ func InitConfig() {
 	}
 
 	err = viper.UnmarshalKey("DB", dbConfig)
+	if err != nil {
+		panic(err)
+	}
+
+	err = viper.UnmarshalKey("Aof", aofConfig)
 	if err != nil {
 		panic(err)
 	}
