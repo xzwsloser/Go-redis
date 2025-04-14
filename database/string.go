@@ -1,6 +1,7 @@
 package database
 
 import (
+	"github.com/xzwsloser/Go-redis/interface/database"
 	"github.com/xzwsloser/Go-redis/interface/redis"
 	"github.com/xzwsloser/Go-redis/lib/utils"
 	"github.com/xzwsloser/Go-redis/resp/protocol"
@@ -100,7 +101,7 @@ func execGet(db *Database, cmdLine [][]byte) redis.Reply {
 func execSet(db *Database, cmdLine [][]byte) redis.Reply {
 	key := string(cmdLine[0])
 	value := cmdLine[1]
-	result := db.PutEntity(key, &DataEntity{
+	result := db.PutEntity(key, &database.DataEntity{
 		Data: value,
 	})
 	db.addAof(utils.CmdLine2("SET", cmdLine))
@@ -111,7 +112,7 @@ func execSet(db *Database, cmdLine [][]byte) redis.Reply {
 func execSetNx(db *Database, cmdLine [][]byte) redis.Reply {
 	key := string(cmdLine[0])
 	value := string(cmdLine[1])
-	result := db.PutEntity(key, &DataEntity{
+	result := db.PutEntity(key, &database.DataEntity{
 		Data: []byte(value),
 	})
 	db.addAof(utils.CmdLine2("SETNX", cmdLine))
@@ -129,7 +130,7 @@ func execGetSet(db *Database, cmdLine [][]byte) redis.Reply {
 		return protocol.NewErrReply(KEY_NOT_EXISTS_WRAN)
 	}
 
-	_ = db.PutEntityIfExistsWithLock(key, &DataEntity{
+	_ = db.PutEntityIfExistsWithLock(key, &database.DataEntity{
 		Data: []byte(value),
 	})
 	db.addAof(utils.CmdLine2("SET", cmdLine))
@@ -161,7 +162,7 @@ func execIncr(db *Database, cmdLine [][]byte) redis.Reply {
 	}
 	value++
 	valueStr := strconv.FormatInt(value, 10)
-	_ = db.PutEntity(key, &DataEntity{
+	_ = db.PutEntity(key, &database.DataEntity{
 		Data: []byte(valueStr),
 	})
 	db.addAof(utils.CmdLine2("Incr", cmdLine))
@@ -183,7 +184,7 @@ func execDecr(db *Database, cmdLine [][]byte) redis.Reply {
 	}
 	value--
 	valueStr := strconv.Itoa(value)
-	_ = db.PutEntity(key, &DataEntity{
+	_ = db.PutEntity(key, &database.DataEntity{
 		Data: []byte(valueStr),
 	})
 	db.addAof(utils.CmdLine2("Decr", cmdLine))
@@ -244,7 +245,7 @@ func execMSet(db *Database, cmdLine [][]byte) redis.Reply {
 
 	result := 0
 	for index, key := range keys {
-		result += db.PutEntity(key, &DataEntity{
+		result += db.PutEntity(key, &database.DataEntity{
 			Data: []byte(values[index]),
 		})
 	}

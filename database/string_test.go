@@ -7,7 +7,7 @@ import (
 )
 
 func TestMIncr(t *testing.T) {
-	db := NewDatabase()
+	db := NewDatabase(0)
 	key := []byte("key")
 	value := []byte("0")
 	execSet(db, [][]byte{key, value})
@@ -27,7 +27,7 @@ func TestMIncr(t *testing.T) {
 }
 
 func TestMSet(t *testing.T) {
-	db := NewDatabase()
+	db := NewDatabase(0)
 	mset(db)
 }
 
@@ -50,7 +50,7 @@ func mset(db *Database) {
 }
 
 func TestMGet(t *testing.T) {
-	db := NewDatabase()
+	db := NewDatabase(0)
 	mset(db)
 	cmdLine := [][]byte{
 		[]byte("k1"),

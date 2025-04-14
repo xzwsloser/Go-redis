@@ -4,7 +4,9 @@ import (
 	"errors"
 	"github.com/xzwsloser/Go-redis/aof"
 	"github.com/xzwsloser/Go-redis/config"
+	"github.com/xzwsloser/Go-redis/interface/database"
 	"github.com/xzwsloser/Go-redis/interface/redis"
+	"github.com/xzwsloser/Go-redis/lib/logger"
 	"github.com/xzwsloser/Go-redis/resp/protocol"
 	"strconv"
 	"strings"
@@ -38,7 +40,7 @@ func NewRedisServer() *RedisServer {
 	dbSet := make([]*atomic.Value, dbNumber)
 	for i := 0; i < dbNumber; i++ {
 		dbSet[i] = &atomic.Value{}
-		dbSet[i].Store(NewDatabase())
+		dbSet[i].Store(NewDatabase(i))
 	}
 
 	server := &RedisServer{
@@ -46,6 +48,9 @@ func NewRedisServer() *RedisServer {
 	}
 
 	persister := aof.NewPersister()
+	persister.SetTmpDBMaker(func() database.DBEngine {
+		return NewPureServer()
+	})
 	if persister != nil {
 		persister.BindRedisServer(server)
 		if persister.Load {
@@ -74,8 +79,10 @@ func (r *RedisServer) Exec(conn redis.Conn, cmdLine [][]byte) redis.Reply {
 			return protocol.NewErrReply(DB_INDEX_ERR)
 		}
 		conn.SelectDB(int(index))
+	} else if cmdName == "bgwriteaof" {
+		r.execBgReWrite()
+		return protocol.NewOkReply()
 	}
-
 	err := validCommand(cmdLine)
 	if err != nil {
 		return protocol.NewErrReply(err.Error())
@@ -124,7 +131,6 @@ func validCommand(commandLine [][]byte) error {
 			return errors.New(ARGS_OF_COMMAND_ERR)
 		}
 	}
-
 	return nil
 }
 
@@ -132,10 +138,58 @@ func (s *RedisServer) selectDB(index int) (*Database, error) {
 	if index < 0 || index >= len(s.dbSet) {
 		return nil, errors.New(DB_NOT_FIND)
 	}
-
 	db, ok := s.dbSet[index].Load().(*Database)
 	if !ok {
 		return nil, errors.New(DB_NOT_FIND)
 	}
 	return db, nil
+}
+
+func (s *RedisServer) mustSelectDB(index int) *Database {
+	var db *Database
+	db, err := s.selectDB(index)
+	if err != nil {
+		db, err = s.selectDB(0)
+		if err != nil {
+			db = NewDatabase(0)
+		}
+	}
+	return db
+}
+
+// ForEach Scan all the k-v in database
+func (s *RedisServer) ForEach(dbIndex int, consumer func(key string, value *database.DataEntity) bool) {
+	s.mustSelectDB(dbIndex).ForEach(consumer)
+}
+
+func (s *RedisServer) ReadAOF() {
+	err := s.persister.Rewrite()
+	if err != nil {
+		logger.Error("rewrite failed!")
+	}
+}
+
+func (s *RedisServer) execBgReWrite() {
+	go func() {
+		defer func() {
+			if err := recover(); err != nil {
+				logger.Error("err: %v", err)
+			}
+		}()
+		s.ReadAOF()
+	}()
+}
+
+func NewPureServer() *RedisServer {
+	dbNum := config.GetDBConfig().Number
+	if dbNum <= 0 {
+		dbNum = 16
+	}
+	server := &RedisServer{}
+	server.dbSet = make([]*atomic.Value, dbNum)
+	for i := 0; i < dbNum; i++ {
+		server.dbSet[i] = &atomic.Value{}
+		server.dbSet[i].Store(NewDatabase(i))
+	}
+	return server
 }

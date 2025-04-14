@@ -9,3 +9,12 @@ type DB interface {
 	Close()
 	AfterClientClose(conn redis.Conn)
 }
+
+type DataEntity struct {
+	Data any
+}
+
+type DBEngine interface {
+	DB
+	ForEach(dbIndex int, consumer func(key string, value *DataEntity) bool)
+}

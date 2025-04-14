@@ -2,6 +2,7 @@ package aof
 
 import (
 	"context"
+	"errors"
 	"github.com/xzwsloser/Go-redis/config"
 	"github.com/xzwsloser/Go-redis/interface/database"
 	"github.com/xzwsloser/Go-redis/lib/logger"
@@ -31,7 +32,8 @@ const (
 )
 
 type Persister struct {
-	db database.DB
+	db         database.DBEngine
+	tmpDBMaker func() database.DBEngine
 	// ctx and cancel is as a signal to end the listening goroutinue
 	ctx    context.Context
 	cancel context.CancelFunc
@@ -99,7 +101,11 @@ func NewPersister() *Persister {
 	return persister
 }
 
-func (persister *Persister) BindRedisServer(db database.DB) {
+func (persister *Persister) SetTmpDBMaker(maker func() database.DBEngine) {
+	persister.tmpDBMaker = maker
+}
+
+func (persister *Persister) BindRedisServer(db database.DBEngine) {
 	persister.db = db
 }
 
@@ -198,10 +204,6 @@ func (persister *Persister) fsyncEverySecond() {
 }
 
 func (persister *Persister) LoadAof() {
-	if !persister.AppendOnly {
-		return
-	}
-
 	file, err := os.OpenFile(persister.aofFileName,
 		os.O_RDONLY,
 		0644)
@@ -251,4 +253,36 @@ func (persister *Persister) LoadAof() {
 			persister.curDBIndex = int(dbIndex)
 		}
 	}
+}
+
+// generatorAof generate the aof file into the temp file
+func (persister *Persister) generatorAof(ctx *RewriteCtx) error {
+	persister.pauseLock.Lock()
+	defer persister.pauseLock.Unlock()
+	handler := persister.newRewriteHandler()
+	tmpFile := ctx.tmpFile
+	if tmpFile == nil {
+		logger.Warn("temp file fd is not open")
+		return errors.New("temp file fd is not open")
+	}
+	handler.LoadAof()
+	// rewrite the aof file
+	selectCmd := utils.CmdLine1("SELECT", strconv.Itoa(ctx.dbIndex))
+	selectReply := protocol.NewMultiReply(selectCmd)
+	_, err := tmpFile.Write(selectReply.ToByte())
+	if err != nil {
+		logger.Error("write select command into database failed")
+		return err
+	}
+	handler.db.ForEach(ctx.dbIndex, func(key string, value *database.DataEntity) bool {
+		cmdLine := EntityToCmd(key, value)
+		cmd := protocol.NewMultiReply(cmdLine).ToByte()
+		_, err = tmpFile.Write(cmd)
+		if err != nil {
+			logger.Error("failed to rewrite message into temp aof file err: %s", err.Error())
+			return false
+		}
+		return true
+	})
+	return nil
 }
