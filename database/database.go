@@ -27,6 +27,7 @@ func NewDatabase() *Database {
 	return &Database{
 		data:    dict.NewConcurrentDict(DEFAULT_HASH_BUCKETS),
 		lockMap: lock.NewLocks(DEFAULT_LOCK_KEYS),
+		addAof:  func(cmdLine [][]byte) {},
 	}
 }
 

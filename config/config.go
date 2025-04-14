@@ -22,6 +22,7 @@ type DBConfig struct {
 }
 
 type AofConfig struct {
+	Load           string `yaml:"Load"`
 	AppendOnly     string `yaml:"AppendOnly"`
 	AppendFileName string `yaml:"AppendFileName"`
 	AppendFileSync string `yaml:"AppendFileSync"`

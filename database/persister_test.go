@@ -2,6 +2,8 @@ package database
 
 import (
 	"github.com/xzwsloser/Go-redis/aof"
+	"github.com/xzwsloser/Go-redis/resp/connection"
+	"log"
 	"testing"
 )
 
@@ -31,4 +33,15 @@ func TestPersister(t *testing.T) {
 		[]byte("k2"),
 	}
 	execIncr(db, commandIncr)
+}
+
+func TestLoadAof(t *testing.T) {
+	server := NewRedisServer()
+	var commandInfo = [][]byte{
+		[]byte("GET"),
+		[]byte("k1"),
+	}
+	fake := connection.NewFakeConnection()
+	reply := server.Exec(fake, commandInfo)
+	log.Print(string(reply.ToByte()))
 }

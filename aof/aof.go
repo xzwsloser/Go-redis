@@ -3,11 +3,16 @@ package aof
 import (
 	"context"
 	"github.com/xzwsloser/Go-redis/config"
+	"github.com/xzwsloser/Go-redis/interface/database"
 	"github.com/xzwsloser/Go-redis/lib/logger"
 	"github.com/xzwsloser/Go-redis/lib/utils"
+	"github.com/xzwsloser/Go-redis/resp/connection"
+	"github.com/xzwsloser/Go-redis/resp/parse"
 	"github.com/xzwsloser/Go-redis/resp/protocol"
+	"io"
 	"os"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 )
@@ -26,6 +31,7 @@ const (
 )
 
 type Persister struct {
+	db database.DB
 	// ctx and cancel is as a signal to end the listening goroutinue
 	ctx    context.Context
 	cancel context.CancelFunc
@@ -41,6 +47,7 @@ type Persister struct {
 	pauseLock   sync.Mutex
 	curDBIndex  int
 	AppendOnly  bool
+	Load        bool
 }
 
 type payLoad struct {
@@ -79,6 +86,10 @@ func NewPersister() *Persister {
 		persister.AppendOnly = true
 	}
 
+	if config.GetAofConfig().Load == "on" {
+		persister.Load = true
+	}
+
 	go persister.listenCmd()
 
 	if persister.aofFsync == AOF_FSYNC_SECOND {
@@ -86,6 +97,10 @@ func NewPersister() *Persister {
 	}
 
 	return persister
+}
+
+func (persister *Persister) BindRedisServer(db database.DB) {
+	persister.db = db
 }
 
 func (persister *Persister) listenCmd() {
@@ -178,6 +193,62 @@ func (persister *Persister) fsyncEverySecond() {
 			persister.Fsync()
 		case <-persister.ctx.Done():
 			return
+		}
+	}
+}
+
+func (persister *Persister) LoadAof() {
+	if !persister.AppendOnly {
+		return
+	}
+
+	file, err := os.OpenFile(persister.aofFileName,
+		os.O_RDONLY,
+		0644)
+	if err != nil {
+		logger.Error("failed to open file err: %v", err)
+		return
+	}
+
+	var reader io.Reader
+	reader = file
+
+	fake := connection.NewFakeConnection()
+	ch := parse.ParseStream(reader)
+	for payLoad := range ch {
+		if payLoad.Error != nil {
+			if payLoad.Error == io.EOF {
+				logger.Warn("the connection is closed")
+				return
+			}
+			logger.Error("load aof file err: %v", payLoad.Error.Error())
+			continue
+		}
+
+		if payLoad.Data == nil {
+			logger.Warn("empty payLoad Err: %v", payLoad.Error.Error())
+			continue
+		}
+
+		reply, ok := payLoad.Data.(*protocol.MulitBulkReply)
+		if !ok {
+			logger.Warn("not a executable command")
+			continue
+		}
+
+		newReply := persister.db.Exec(fake, reply.Args)
+		if protocol.IsErrReply(newReply) {
+			logger.Error("executor err")
+			continue
+		}
+
+		if strings.ToLower(string(reply.Args[0])) == "select" {
+			dbIndex, err := strconv.ParseInt(string(reply.Args[1]), 10, 64)
+			if err != nil {
+				logger.Warn("valid db index")
+				continue
+			}
+			persister.curDBIndex = int(dbIndex)
 		}
 	}
 }

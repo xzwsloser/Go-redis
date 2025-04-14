@@ -47,8 +47,13 @@ func NewRedisServer() *RedisServer {
 
 	persister := aof.NewPersister()
 	if persister != nil {
+		persister.BindRedisServer(server)
+		if persister.Load {
+			persister.LoadAof()
+		}
 		server.bindPersister(persister)
 	}
+
 	return server
 }
 

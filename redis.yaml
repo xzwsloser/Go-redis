@@ -17,6 +17,7 @@ DB:
 
 # 配置 Aof 相关信息
 Aof:
+  Load: on
   AppendOnly: on
   AppendFileName: appendonly.aof
   AppendFileSync: always
