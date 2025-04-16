@@ -192,6 +192,149 @@ func (skiplist *skipList) removeNode(node *Node, update []*Node) {
 	skiplist.length--
 }
 
+func (skiplist *skipList) getByRank(rank int64) *Node {
+	i := int64(0)
+	node := skiplist.header
+	for j := skiplist.level - 1; j >= 0; j-- {
+		// 注意 span 的含义, span 的总和就是 rank
+		for node.level[j].next != nil && i+node.level[j].span <= rank {
+			i += node.level[j].span
+			node = node.level[j].next
+		}
+
+		if i == rank {
+			return node
+		}
+	}
+
+	return nil
+}
+
+// @brief: hashInRange 查询 min,max之间是否存在元素(但是不一定存在节点,比如 1 -> 3 -> 7 , 但是范围为 4 - 6
+func (skiplist *skipList) hasInRange(min Border, max Border) bool {
+	if !min.IsIntersected(max) || skiplist.length == 0 {
+		return false
+	}
+
+	// less 表示满足条件,中间还有交集,注意到取反即可
+	if !min.less(&skiplist.tail.Element) ||
+		!max.greater(&skiplist.header.level[0].next.Element) {
+		return false
+	}
+	return true
+}
+
+// @brief: getFirstNodeInRange 查询范围内的第一个元素
+func (skiplist *skipList) getFirstNodeInRange(min Border, max Border) *Node {
+	if !skiplist.hasInRange(min, max) {
+		return nil
+	}
+
+	// 如果范围为 [min,max] ,那么第一个元素就是 min
+	// 注意到这里使用 !min.less 使得 == 的时候退出
+	// 如果使用 min.greater,那么就会导致 == 的时候不退出
+	node := skiplist.header
+	for i := skiplist.level - 1; i >= 0; i-- {
+		for node.level[i].next != nil &&
+			!min.less(&node.level[i].next.Element) {
+			node = node.level[i].next
+		}
+	}
+
+	// 满足 min.less(next)
+	node = node.level[0].next
+	// 如果使用 max.less 那么就会导致相等的时候返回 nil
+	if node != nil {
+		if !max.greater(&node.Element) {
+			return nil
+		}
+	}
+
+	return node
+}
+
+// @brief: getLastNodeInRange 查询指定范围内的最后一个元素
+func (skiplist *skipList) getLastNodeInRange(min Border, max Border) *Node {
+	if !skiplist.hasInRange(min, max) {
+		return nil
+	}
+	node := skiplist.header
+	for i := skiplist.level - 1; i >= 0; i-- {
+		for node.level[i].next != nil &&
+			!max.less(&node.level[i].next.Element) {
+			node = node.level[i].next
+		}
+	}
+
+	if min.less(&node.Element) {
+		return node
+	}
+
+	return nil
+}
+
+// @brief: RemoveRange 删除指定区间内部的元素
+func (skiplist *skipList) removeByRange(min Border, max Border, limit int) (removed []*Element) {
+	update := make([]*Node, maxLevel)
+	removed = make([]*Element, 0)
+	node := skiplist.header
+	for i := skiplist.level - 1; i >= 0; i-- {
+		for node.level[i].next != nil {
+			if min.less(&node.level[i].next.Element) {
+				break
+			}
+			node = node.level[i].next
+		}
+		update[i] = node
+	}
+
+	node = node.level[0].next
+	for node != nil {
+		next := node.level[0].next
+		removedElement := node.Element
+		removed = append(removed, &removedElement)
+		skiplist.removeNode(node, update)
+		node = next
+		if node != nil && !max.greater(&node.Element) || len(removed) >= limit {
+			break
+		}
+	}
+	return
+}
+
+// @brief: 根据排名删除元素
+func (skiplist *skipList) removeByRank(start int64, stop int64) (removed []*Element) {
+	if start > stop {
+		return
+	}
+	var cur int64 = 0
+	update := make([]*Node, maxLevel)
+	removed = make([]*Element, 0)
+	node := skiplist.header
+	for i := skiplist.level - 1; i >= 0; i-- {
+		for node.level[i].next != nil && node.level[i].span+cur < start {
+			cur += node.level[i].span
+			node = node.level[i].next
+		}
+		update[i] = node
+	}
+
+	cur++
+	node = node.level[0].next
+	for node != nil {
+		next := node.level[0].next
+		removedElement := node.Element
+		removed = append(removed, &removedElement)
+		skiplist.removeNode(node, update)
+		node = next
+		cur++
+		if cur > stop {
+			break
+		}
+	}
+	return
+}
+
 func (skiplist *skipList) show() {
 	for i := skiplist.level - 1; i >= 0; i-- {
 		fmt.Print("h")
