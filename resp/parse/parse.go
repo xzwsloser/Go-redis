@@ -68,7 +68,7 @@ func parse0(reader io.Reader, ch chan<- *PayLoad) {
 		if err != nil {
 			// if the connection is closed , close the channel
 			if ioErr {
-				logger.Error("parse0 IO Err: %s", err.Error())
+				// logger.Error("parse0 IO Err: %s", err.Error())
 				close(ch)
 				return
 			}

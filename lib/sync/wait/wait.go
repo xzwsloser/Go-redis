@@ -22,7 +22,7 @@ func (w *Wait) Wait() {
 	w.wait.Wait()
 }
 
-func (w *Wait) WaitWithTimeout(timeout time.Duration) {
+func (w *Wait) WaitWithTimeout(timeout time.Duration) bool {
 	ch := make(chan struct{})
 	go func() {
 		w.wait.Wait()
@@ -31,6 +31,8 @@ func (w *Wait) WaitWithTimeout(timeout time.Duration) {
 
 	select {
 	case <-ch:
+		return false
 	case <-time.After(timeout):
+		return true
 	}
 }
