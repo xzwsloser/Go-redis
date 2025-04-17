@@ -335,6 +335,25 @@ func (skiplist *skipList) removeByRank(start int64, stop int64) (removed []*Elem
 	return
 }
 
+func (skiplist *skipList) getRank(member string, score float64) int64 {
+	var rank int64
+	node := skiplist.header
+	for i := skiplist.level - 1; i >= 0; i-- {
+		for node.level[i].next != nil &&
+			((node.level[i].next.Score < score) ||
+				(node.level[i].next.Score == score &&
+					node.level[i].next.Member <= member)) {
+			rank += node.level[i].span
+			node = node.level[i].next
+		}
+
+		if node.Member == member {
+			return rank
+		}
+	}
+	return 0
+}
+
 func (skiplist *skipList) show() {
 	for i := skiplist.level - 1; i >= 0; i-- {
 		fmt.Print("h")

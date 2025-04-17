@@ -174,8 +174,8 @@ func TestRemoveByRank(t *testing.T) {
 	skiplist.insertNode("i", 9)
 	skiplist.insertNode("j", 10)
 
-	//rank := skiplist.getByRank(1)
-	//fmt.Println(rank.Element, rank.Score)
+	rank := skiplist.getByRank(1)
+	fmt.Println(rank.Element, rank.Score)
 
 	removed := skiplist.removeByRank(4, 8)
 	for _, v := range removed {
