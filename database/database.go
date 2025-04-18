@@ -6,28 +6,40 @@ import (
 	"github.com/xzwsloser/Go-redis/interface/database"
 	"github.com/xzwsloser/Go-redis/interface/redis"
 	"github.com/xzwsloser/Go-redis/lib/logger"
+	"github.com/xzwsloser/Go-redis/lib/timeheap"
+	"github.com/xzwsloser/Go-redis/resp/protocol"
+	"time"
 )
 
 const (
-	DEFAULT_HASH_BUCKETS = 16
-	DEFAULT_LOCK_KEYS    = 32
+	DEFAULT_HASH_BUCKETS  = 16
+	DEFAULT_LOCK_KEYS     = 32
+	DEFAULT_TICK_INTERVAL = time.Millisecond * 500
+	EXPIRE_PREFIX         = "expire:"
 )
 
 // Database is the inner memory database of redis
 type Database struct {
-	index   int
-	data    dict.Dict
-	lockMap *lock.Locks
-	addAof  func(cmdLine [][]byte)
+	index int
+	data  dict.Dict
+	// key(string) -> expireTime(time.Time)
+	ttlMap   dict.Dict
+	lockMap  *lock.Locks
+	addAof   func(cmdLine [][]byte)
+	timeHeap *timeheap.TimeHeap
 }
 
 func NewDatabase(idx int) *Database {
-	return &Database{
-		data:    dict.NewConcurrentDict(DEFAULT_HASH_BUCKETS),
-		lockMap: lock.NewLocks(DEFAULT_LOCK_KEYS),
-		addAof:  func(cmdLine [][]byte) {},
-		index:   idx,
+	db := &Database{
+		data:     dict.NewConcurrentDict(DEFAULT_HASH_BUCKETS),
+		ttlMap:   dict.NewConcurrentDict(DEFAULT_LOCK_KEYS),
+		lockMap:  lock.NewLocks(DEFAULT_LOCK_KEYS),
+		addAof:   func(cmdLine [][]byte) {},
+		index:    idx,
+		timeHeap: timeheap.NewTimeHeap(DEFAULT_TICK_INTERVAL),
 	}
+	db.timeHeap.Start()
+	return db
 }
 
 type ExecFunc func(db *Database, cmdLine [][]byte) redis.Reply
@@ -133,4 +145,33 @@ func (db *Database) ForEach(consumer func(key string, value *database.DataEntity
 		}
 		return consumer(key, entity)
 	})
+}
+
+func (db *Database) Persister(key string) {
+	expireKey := EXPIRE_PREFIX + key
+	db.ttlMap.Remove(expireKey)
+	db.timeHeap.RemoveTask(expireKey)
+}
+
+func (db *Database) Expire(key string, expireTime time.Duration) redis.Reply {
+	expireKey := EXPIRE_PREFIX + key
+	db.LockSingleKey(expireKey)
+	defer db.UnlockSingleKey(expireKey)
+	expire := time.Now().Add(expireTime)
+	if _, ok := db.ttlMap.GetWithLock(expireKey); ok {
+		db.timeHeap.RemoveTask(expireKey)
+	}
+	db.ttlMap.PutWithLock(expireKey, expire)
+	db.timeHeap.AddTask(expire, expireKey, func() {
+		db.Locks([]string{key, expireKey})
+		defer db.Unlocks([]string{key, expireKey})
+		if value, ok := db.ttlMap.Get(expireKey); ok {
+			timeToExpire := value.(time.Time)
+			if time.Now().After(timeToExpire) {
+				db.data.RemoveWithLock(key)
+			}
+		}
+		db.ttlMap.RemoveWithLock(expireKey)
+	})
+	return protocol.NewOkReply()
 }

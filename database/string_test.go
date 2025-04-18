@@ -1,9 +1,11 @@
 package database
 
 import (
+	"github.com/xzwsloser/Go-redis/resp/protocol"
 	"log"
 	"sync"
 	"testing"
+	"time"
 )
 
 func TestMIncr(t *testing.T) {
@@ -63,4 +65,29 @@ func TestMGet(t *testing.T) {
 	log.Println("===========")
 	log.Print(string(reply.ToByte()))
 	log.Println("===========")
+}
+
+func TestSetEx(t *testing.T) {
+	db := NewDatabase(0)
+	var command = [][]byte{
+		[]byte("k1"),
+		[]byte("v1"),
+		[]byte("5"),
+	}
+
+	var commandGet = [][]byte{
+		[]byte("k1"),
+	}
+
+	reply := execSetEx(db, command)
+	log.Print(string(reply.ToByte()))
+	for i := 0; i < 8; i++ {
+		reply = execGet(db, commandGet)
+		if protocol.IsErrReply(reply) {
+			log.Println("key not exists")
+		} else {
+			log.Println("find the key")
+		}
+		time.Sleep(time.Second)
+	}
 }

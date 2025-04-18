@@ -10,7 +10,7 @@ func TestHeapSort(t *testing.T) {
 	heap := NewHeap(arr, func(a any, b any) bool {
 		at := a.(int)
 		bt := b.(int)
-		return at < bt
+		return at > bt
 	})
 
 	heap.Push(31)

@@ -6,6 +6,7 @@ import (
 	"github.com/xzwsloser/Go-redis/lib/utils"
 	"github.com/xzwsloser/Go-redis/resp/protocol"
 	"strconv"
+	"time"
 )
 
 /*
@@ -43,6 +44,7 @@ func init() {
 	RegisterCommand("slen", execSLen, 2)
 	RegisterCommand("mget", execMGet, -2)
 	RegisterCommand("mset", execMSet, -3)
+	RegisterCommand("setex", execSetEx, 4)
 }
 
 func (db *Database) getAsString(key string) (value []byte, exists bool) {
@@ -105,6 +107,7 @@ func execSet(db *Database, cmdLine [][]byte) redis.Reply {
 		Data: value,
 	})
 	db.addAof(utils.CmdLine2("SET", cmdLine))
+	db.Persister(key)
 	return protocol.NewIntReply(int64(result))
 }
 
@@ -116,6 +119,7 @@ func execSetNx(db *Database, cmdLine [][]byte) redis.Reply {
 		Data: []byte(value),
 	})
 	db.addAof(utils.CmdLine2("SETNX", cmdLine))
+	db.Persister(key)
 	return protocol.NewIntReply(int64(result))
 }
 
@@ -250,5 +254,27 @@ func execMSet(db *Database, cmdLine [][]byte) redis.Reply {
 		})
 	}
 	db.addAof(utils.CmdLine2("MSET", cmdLine))
+	return protocol.NewIntReply(int64(result))
+}
+
+// setEx key value expireTime(s)
+func execSetEx(db *Database, cmdLine [][]byte) redis.Reply {
+	key := string(cmdLine[0])
+	value := cmdLine[1]
+	expireTimeStr := string(cmdLine[2])
+	expireTime, err := strconv.ParseInt(expireTimeStr, 10, 64)
+	if err != nil {
+		return protocol.NewErrReply("err expireTime format")
+	}
+
+	result := db.PutEntity(key, &database.DataEntity{
+		Data: value,
+	})
+
+	if expireTime > 0 {
+		timeout := time.Duration(expireTime) * time.Second
+		db.Expire(key, timeout)
+	}
+	db.addAof(utils.CmdLine2("SETEX", cmdLine))
 	return protocol.NewIntReply(int64(result))
 }
