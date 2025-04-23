@@ -7,6 +7,7 @@ import (
 	"github.com/xzwsloser/Go-redis/interface/database"
 	"github.com/xzwsloser/Go-redis/interface/redis"
 	"github.com/xzwsloser/Go-redis/lib/logger"
+	"github.com/xzwsloser/Go-redis/pub"
 	"github.com/xzwsloser/Go-redis/resp/protocol"
 	"strconv"
 	"strings"
@@ -25,6 +26,7 @@ const (
 type RedisServer struct {
 	dbSet     []*atomic.Value
 	persister *aof.Persister
+	hub       *pub.Hub
 }
 
 func init() {
@@ -58,7 +60,7 @@ func NewRedisServer() *RedisServer {
 		}
 		server.bindPersister(persister)
 	}
-
+	server.hub = pub.NewHub()
 	return server
 }
 
@@ -82,7 +84,14 @@ func (r *RedisServer) Exec(conn redis.Conn, cmdLine [][]byte) redis.Reply {
 	} else if cmdName == "bgwriteaof" {
 		r.execBgReWrite()
 		return protocol.NewOkReply()
+	} else if cmdName == "subscribe" {
+		return r.hub.Subscribe(conn, cmdLine[1:])
+	} else if cmdName == "unsubscribe" {
+		return r.hub.Unsubscribe(conn, cmdLine[1:])
+	} else if cmdName == "publish" {
+		return r.hub.Publish(cmdLine[1:])
 	}
+
 	err := validCommand(cmdLine)
 	if err != nil {
 		return protocol.NewErrReply(err.Error())
@@ -112,7 +121,7 @@ func (r *RedisServer) Close() {
 }
 
 func (r *RedisServer) AfterClientClose(conn redis.Conn) {
-
+	r.hub.UnSubscribeAll(conn)
 }
 
 func validCommand(commandLine [][]byte) error {

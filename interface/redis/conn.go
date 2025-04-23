@@ -7,4 +7,8 @@ type Conn interface {
 	RemoteAddr() string
 	GetDBIndex() int
 	SelectDB(int)
+	Subscribe(channel string) bool
+	UnSubscribe(channel string) bool
+	GetChannel() []string
+	SubsCount() int
 }

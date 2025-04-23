@@ -108,4 +108,12 @@ func TestRange(t *testing.T) {
 	for i, v := range values {
 		log.Println(i, " == ", v)
 	}
+	list.RemoveByCond(func(i int, value any) bool {
+		return i == 3
+	})
+	log.Println("=================")
+	list.ForEach(func(key any) bool {
+		log.Println(key)
+		return true
+	})
 }

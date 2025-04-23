@@ -174,6 +174,23 @@ func (list *LinkedList) RemoveByValue(value any, reversed bool) (result int) {
 	return 0
 }
 
+func (list *LinkedList) RemoveByCond(condition func(int, any) bool) (result int) {
+	if list.Empty() {
+		return 0
+	}
+	ptr := list.head
+	for i := 0; i < list.size; i++ {
+		if condition(i, ptr.data) {
+			ptr.prev.next = ptr.next
+			ptr.next.prev = ptr.prev
+			list.size--
+			return 1
+		}
+		ptr = ptr.next
+	}
+	return 0
+}
+
 func (list *LinkedList) Len() int {
 	return list.size
 }

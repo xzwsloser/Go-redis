@@ -3,6 +3,7 @@ package connection
 import (
 	"github.com/xzwsloser/Go-redis/lib/sync/wait"
 	"net"
+	"sync"
 	"time"
 )
 
@@ -11,9 +12,50 @@ var (
 )
 
 type Connection struct {
+	mu            *sync.Mutex
 	conn          net.Conn
 	sendDataWait  wait.Wait
 	selectDBIndex int
+	channels      map[string]bool
+}
+
+func (c *Connection) Subscribe(channel string) bool {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	_, ok := c.channels[channel]
+	if ok {
+		return false
+	}
+	c.channels[channel] = true
+	return true
+}
+
+func (c *Connection) UnSubscribe(channel string) bool {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if _, ok := c.channels[channel]; !ok {
+		return false
+	}
+	delete(c.channels, channel)
+	return true
+}
+
+func (c *Connection) GetChannel() []string {
+	res := make([]string, len(c.channels))
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	i := 0
+	for channel, _ := range c.channels {
+		res[i] = channel
+		i++
+	}
+	return res
+}
+
+func (c *Connection) SubsCount() int {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return len(c.channels)
 }
 
 func (c *Connection) GetDBIndex() int {
@@ -26,7 +68,9 @@ func (c *Connection) SelectDB(dbIndex int) {
 
 func NewConnection(conn net.Conn) *Connection {
 	return &Connection{
-		conn: conn,
+		conn:     conn,
+		mu:       &sync.Mutex{},
+		channels: make(map[string]bool),
 	}
 }
 

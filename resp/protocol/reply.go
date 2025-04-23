@@ -151,3 +151,9 @@ func NewUnknownReply() *UnknownReply {
 func (*UnknownReply) ToByte() []byte {
 	return []byte("-ERR unknow reply" + CRLF)
 }
+
+type NoReply struct{}
+
+func NewNoReply() *NoReply { return &NoReply{} }
+
+func (*NoReply) ToByte() []byte { return []byte("") }
