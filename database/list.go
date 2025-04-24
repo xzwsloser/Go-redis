@@ -9,21 +9,21 @@ import (
 )
 
 func init() {
-	RegisterCommand("LINDEX", execLIndex, 3)
-	RegisterCommand("LLEN", execLen, 2)
-	RegisterCommand("LPOP", execLPop, 2)
-	RegisterCommand("LPUSH", execLPush, -3)
-	RegisterCommand("RPOP", execRPop, 2)
-	RegisterCommand("RPUSH", execRPush, -3)
-	RegisterCommand("LREM", execLRem, 4)
-	RegisterCommand("LRANGE", execLRange, 4)
+	RegisterCommand("LINDEX", execLIndex, readFirstKey, nil, 3)
+	RegisterCommand("LLEN", execLen, readFirstKey, nil, 2)
+	RegisterCommand("LPOP", execLPop, writeFirstKey, nil, 2)
+	RegisterCommand("LPUSH", execLPush, writeFirstKey, nil, -3)
+	RegisterCommand("RPOP", execRPop, writeFirstKey, nil, 2)
+	RegisterCommand("RPUSH", execRPush, writeFirstKey, nil, -3)
+	RegisterCommand("LREM", execLRem, writeFirstKey, nil, 4)
+	RegisterCommand("LRANGE", execLRange, readFirstKey, nil, 4)
 }
 
 func (db *Database) getOrInitLinkedList(key string) *list.LinkedList {
-	entity, exists := db.GetEntity(key)
+	entity, exists := db.GetEntityWithLock(key)
 	if !exists {
 		ll := list.NewLinkedList()
-		db.PutEntity(key, &database.DataEntity{
+		db.PutEntityWithLock(key, &database.DataEntity{
 			Data: ll,
 		})
 		return ll
@@ -31,7 +31,7 @@ func (db *Database) getOrInitLinkedList(key string) *list.LinkedList {
 	ll, ok := entity.Data.(*list.LinkedList)
 	if !ok {
 		ll := list.NewLinkedList()
-		db.PutEntity(key, &database.DataEntity{
+		db.PutEntityWithLock(key, &database.DataEntity{
 			Data: ll,
 		})
 		return ll

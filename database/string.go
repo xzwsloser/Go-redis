@@ -34,17 +34,17 @@ const (
 )
 
 func init() {
-	RegisterCommand("get", execGet, 2)
-	RegisterCommand("set", execSet, 3)
-	RegisterCommand("setnx", execSetNx, 3)
-	RegisterCommand("getset", execGetSet, 3)
-	RegisterCommand("del", execDel, -2)
-	RegisterCommand("incr", execIncr, 2)
-	RegisterCommand("decr", execDecr, 2)
-	RegisterCommand("slen", execSLen, 2)
-	RegisterCommand("mget", execMGet, -2)
-	RegisterCommand("mset", execMSet, -3)
-	RegisterCommand("setex", execSetEx, 4)
+	RegisterCommand("get", execGet, readFirstKey, nil, 2)
+	RegisterCommand("set", execSet, writeFirstKey, nil, 3)
+	RegisterCommand("setnx", execSetNx, writeFirstKey, nil, 3)
+	RegisterCommand("getset", execGetSet, writeFirstKey, nil, 3)
+	RegisterCommand("del", execDel, writeKeys, nil, -2)
+	RegisterCommand("incr", execIncr, writeFirstKey, nil, 2)
+	RegisterCommand("decr", execDecr, writeFirstKey, nil, 2)
+	RegisterCommand("slen", execSLen, readFirstKey, nil, 2)
+	RegisterCommand("mget", execMGet, readKeys, nil, -2)
+	RegisterCommand("mset", execMSet, prepareMSet, nil, -3)
+	RegisterCommand("setex", execSetEx, writeFirstKey, nil, 4)
 }
 
 func (db *Database) getAsString(key string) (value []byte, exists bool) {
@@ -92,7 +92,7 @@ func stringsToBytes(keys []string) (bytes [][]byte) {
 // GET  eg GET "Hello"
 func execGet(db *Database, cmdLine [][]byte) redis.Reply {
 	key := string(cmdLine[0])
-	value, exists := db.getAsString(key)
+	value, exists := db.getAsStringWithLock(key)
 	if !exists {
 		return protocol.NewErrReply(KEY_NOT_EXISTS_WRAN)
 	}
@@ -103,7 +103,7 @@ func execGet(db *Database, cmdLine [][]byte) redis.Reply {
 func execSet(db *Database, cmdLine [][]byte) redis.Reply {
 	key := string(cmdLine[0])
 	value := cmdLine[1]
-	result := db.PutEntity(key, &database.DataEntity{
+	result := db.PutEntityWithLock(key, &database.DataEntity{
 		Data: value,
 	})
 	db.addAof(utils.CmdLine2("SET", cmdLine))
@@ -115,7 +115,7 @@ func execSet(db *Database, cmdLine [][]byte) redis.Reply {
 func execSetNx(db *Database, cmdLine [][]byte) redis.Reply {
 	key := string(cmdLine[0])
 	value := string(cmdLine[1])
-	result := db.PutEntity(key, &database.DataEntity{
+	result := db.PutEntityWithLock(key, &database.DataEntity{
 		Data: []byte(value),
 	})
 	db.addAof(utils.CmdLine2("SETNX", cmdLine))
@@ -127,8 +127,6 @@ func execSetNx(db *Database, cmdLine [][]byte) redis.Reply {
 func execGetSet(db *Database, cmdLine [][]byte) redis.Reply {
 	key := string(cmdLine[0])
 	value := string(cmdLine[1])
-	db.LockSingleKey(key)
-	defer db.UnlockSingleKey(key)
 	result, exists := db.getAsStringWithLock(key)
 	if !exists {
 		return protocol.NewErrReply(KEY_NOT_EXISTS_WRAN)
@@ -145,7 +143,7 @@ func execGetSet(db *Database, cmdLine [][]byte) redis.Reply {
 func execDel(db *Database, cmdLine [][]byte) redis.Reply {
 	keys := bytesToString(cmdLine)
 	for _, key := range keys {
-		db.RemoveEntity(key)
+		db.RemoveEntityWithLock(key)
 	}
 	db.addAof(utils.CmdLine2("DEL", cmdLine))
 	return protocol.NewOkReply()
@@ -154,8 +152,6 @@ func execDel(db *Database, cmdLine [][]byte) redis.Reply {
 // Incr eg Incr a1
 func execIncr(db *Database, cmdLine [][]byte) redis.Reply {
 	key := string(cmdLine[0])
-	db.LockSingleKey(key)
-	defer db.UnlockSingleKey(key)
 	valueBytes, exists := db.getAsStringWithLock(key)
 	if !exists {
 		return protocol.NewIntReply(0)
@@ -176,8 +172,6 @@ func execIncr(db *Database, cmdLine [][]byte) redis.Reply {
 // DECR  e.g DECR v1
 func execDecr(db *Database, cmdLine [][]byte) redis.Reply {
 	key := string(cmdLine[0])
-	db.LockSingleKey(key)
-	defer db.UnlockSingleKey(key)
 	valueBytes, exists := db.getAsStringWithLock(key)
 	if !exists {
 		return protocol.NewIntReply(0)
@@ -198,7 +192,7 @@ func execDecr(db *Database, cmdLine [][]byte) redis.Reply {
 // LEN  e.g LEN a1
 func execSLen(db *Database, cmdLine [][]byte) redis.Reply {
 	key := string(cmdLine[0])
-	value, exists := db.getAsString(key)
+	value, exists := db.getAsStringWithLock(key)
 	if !exists {
 		return protocol.NewErrReply(KEY_NOT_EXISTS_WRAN)
 	}
@@ -210,7 +204,7 @@ func execMGet(db *Database, cmdLine [][]byte) redis.Reply {
 	keys := bytesToString(cmdLine)
 	resultMap := make(map[string]string)
 	for _, key := range keys {
-		value, exists := db.getAsString(key)
+		value, exists := db.getAsStringWithLock(key)
 		if !exists {
 			return protocol.NewErrReply(KEY_NOT_EXISTS_WRAN)
 		}
@@ -225,6 +219,19 @@ func execMGet(db *Database, cmdLine [][]byte) redis.Reply {
 	}
 	bytes := stringsToBytes(results)
 	return protocol.NewMultiReply(bytes)
+}
+
+func prepareMSet(args [][]byte) ([]string, []string) {
+	if len(args)%2 == 1 {
+		return nil, nil
+	}
+	wks := make([]string, len(args)/2)
+	i := 0
+	for j := 0; j < len(args); j += 2 {
+		wks[i] = string(args[j])
+		i++
+	}
+	return wks, nil
 }
 
 // MSET MSET k1 v1 k2 v2 ...
@@ -249,7 +256,7 @@ func execMSet(db *Database, cmdLine [][]byte) redis.Reply {
 
 	result := 0
 	for index, key := range keys {
-		result += db.PutEntity(key, &database.DataEntity{
+		result += db.PutEntityWithLock(key, &database.DataEntity{
 			Data: []byte(values[index]),
 		})
 	}
@@ -267,7 +274,7 @@ func execSetEx(db *Database, cmdLine [][]byte) redis.Reply {
 		return protocol.NewErrReply("err expireTime format")
 	}
 
-	result := db.PutEntity(key, &database.DataEntity{
+	result := db.PutEntityWithLock(key, &database.DataEntity{
 		Data: value,
 	})
 

@@ -14,23 +14,23 @@ import (
 */
 
 func init() {
-	RegisterCommand("ZADD", execZadd, -4)
-	RegisterCommand("ZCARD", execZcard, 2)
-	RegisterCommand("ZCOUNT", execZcount, 4)
-	RegisterCommand("ZINCRBY", execZIncrBy, 4)
-	RegisterCommand("ZRANK", execZrank, 3)
-	RegisterCommand("ZSCORE", execZScore, 3)
-	RegisterCommand("ZRANGE", execZrange, 4)
-	RegisterCommand("ZREM", execZRem, -3)
-	RegisterCommand("ZRANGEBYSCORE", execZRangeByScore, 4)
-	RegisterCommand("ZREMRANGEBYRANK", execZRemRangeByRank, 4)
+	RegisterCommand("ZADD", execZAdd, writeFirstKey, nil, -4)
+	RegisterCommand("ZCARD", execZCard, readFirstKey, nil, 2)
+	RegisterCommand("ZCOUNT", execZCount, readFirstKey, nil, 4)
+	RegisterCommand("ZINCRBY", execZIncrBy, writeFirstKey, nil, 4)
+	RegisterCommand("ZRANK", execZRank, readFirstKey, nil, 3)
+	RegisterCommand("ZSCORE", execZScore, readFirstKey, nil, 3)
+	RegisterCommand("ZRANGE", execZRange, readFirstKey, nil, 4)
+	RegisterCommand("ZREM", execZRem, writeFirstKey, nil, -3)
+	RegisterCommand("ZRANGEBYSCORE", execZRangeByScore, readFirstKey, nil, 4)
+	RegisterCommand("ZREMRANGEBYRANK", execZRemRangeByRank, writeFirstKey, nil, 4)
 }
 
 func (db *Database) getOrInitSortedSet(key string) *sortedset.SortedSet {
-	entity, exists := db.GetEntity(key)
+	entity, exists := db.GetEntityWithLock(key)
 	if !exists {
 		ns := sortedset.NewSortedSet()
-		db.PutEntity(key, &database.DataEntity{
+		db.PutEntityWithLock(key, &database.DataEntity{
 			Data: ns,
 		})
 		return ns
@@ -38,7 +38,7 @@ func (db *Database) getOrInitSortedSet(key string) *sortedset.SortedSet {
 	ss, ok := entity.Data.(*sortedset.SortedSet)
 	if !ok {
 		ns := sortedset.NewSortedSet()
-		db.PutEntity(key, &database.DataEntity{
+		db.PutEntityWithLock(key, &database.DataEntity{
 			Data: ns,
 		})
 		return ns
@@ -47,7 +47,7 @@ func (db *Database) getOrInitSortedSet(key string) *sortedset.SortedSet {
 }
 
 // ZADD  e.g ZADD key score member ...
-func execZadd(db *Database, cmdLine [][]byte) redis.Reply {
+func execZAdd(db *Database, cmdLine [][]byte) redis.Reply {
 	key := string(cmdLine[0])
 	pairLens := len(cmdLine) - 1
 	if pairLens%2 == 1 {
@@ -76,14 +76,14 @@ func execZadd(db *Database, cmdLine [][]byte) redis.Reply {
 }
 
 // ZCARD key
-func execZcard(db *Database, cmdLine [][]byte) redis.Reply {
+func execZCard(db *Database, cmdLine [][]byte) redis.Reply {
 	key := string(cmdLine[0])
 	ss := db.getOrInitSortedSet(key)
 	return protocol.NewIntReply(ss.Len())
 }
 
 // ZCOUNT e.g ZCOUNT key min max
-func execZcount(db *Database, cmdLine [][]byte) redis.Reply {
+func execZCount(db *Database, cmdLine [][]byte) redis.Reply {
 	key := string(cmdLine[0])
 	minValue, err := strconv.ParseFloat(string(cmdLine[1]), 64)
 	maxValue, err := strconv.ParseFloat(string(cmdLine[2]), 64)
@@ -122,7 +122,7 @@ func execZIncrBy(db *Database, cmdLine [][]byte) redis.Reply {
 }
 
 // ZRank key member
-func execZrank(db *Database, cmdLine [][]byte) redis.Reply {
+func execZRank(db *Database, cmdLine [][]byte) redis.Reply {
 	key := string(cmdLine[0])
 	member := string(cmdLine[1])
 	ss := db.getOrInitSortedSet(key)
@@ -147,7 +147,7 @@ func execZScore(db *Database, cmdLine [][]byte) redis.Reply {
 }
 
 // ZRange key start stop
-func execZrange(db *Database, cmdLine [][]byte) redis.Reply {
+func execZRange(db *Database, cmdLine [][]byte) redis.Reply {
 	key := string(cmdLine[0])
 	start, err := strconv.ParseInt(string(cmdLine[1]), 10, 64)
 	stop, err := strconv.ParseInt(string(cmdLine[2]), 10, 64)
@@ -169,6 +169,7 @@ func execZrange(db *Database, cmdLine [][]byte) redis.Reply {
 	return protocol.NewMultiReply(args)
 }
 
+// execZRem: ZREM key member [member ...]
 func execZRem(db *Database, cmdLine [][]byte) redis.Reply {
 	key := string(cmdLine[0])
 	members := make([]string, len(cmdLine)-1)

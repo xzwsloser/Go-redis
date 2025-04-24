@@ -126,7 +126,7 @@ func (ls *Locks) RWLocks(writeKeys []string, readKeys []string) {
 		if w {
 			lock.Lock()
 		} else {
-			lock.Unlock()
+			lock.RLock()
 		}
 	}
 }

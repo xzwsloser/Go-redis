@@ -30,7 +30,7 @@ type RedisServer struct {
 }
 
 func init() {
-	RegisterCommand("ping", execPing, 1)
+	RegisterCommand("ping", execPing, nil, nil, 1)
 }
 
 func NewRedisServer() *RedisServer {
@@ -92,12 +92,17 @@ func (r *RedisServer) Exec(conn redis.Conn, cmdLine [][]byte) redis.Reply {
 		return r.hub.Publish(cmdLine[1:])
 	}
 
+	return r.execNormalCommand(conn, cmdLine)
+}
+
+func (r *RedisServer) execNormalCommand(conn redis.Conn, cmdLine [][]byte) redis.Reply {
+	cmdName := strings.ToLower(string(cmdLine[0]))
 	err := validCommand(cmdLine)
 	if err != nil {
 		return protocol.NewErrReply(err.Error())
 	}
 
-	seleteDB, err := r.selectDB(conn.GetDBIndex())
+	selectDB, err := r.selectDB(conn.GetDBIndex())
 	if err != nil {
 		return protocol.NewErrReply(err.Error())
 	}
@@ -107,7 +112,37 @@ func (r *RedisServer) Exec(conn redis.Conn, cmdLine [][]byte) redis.Reply {
 		return protocol.NewErrReply(COMMAND_NOT_FIND)
 	}
 
-	reply := cmd.exector(seleteDB, cmdLine[1:])
+	prepare := cmd.prepare
+	if prepare != nil {
+		wks, rks := prepare(cmdLine[1:])
+		selectDB.RWLocks(wks, rks)
+		defer selectDB.RWUnlocks(wks, rks)
+	}
+	reply := cmd.exector(selectDB, cmdLine[1:])
+	if reply == nil {
+		return protocol.NewErrReply(EMPTY_REPLY)
+	}
+	return reply
+}
+
+func (r *RedisServer) execWithLock(conn redis.Conn, cmdLine [][]byte) redis.Reply {
+	cmdName := string(cmdLine[0])
+	err := validCommand(cmdLine)
+	if err != nil {
+		return protocol.NewErrReply(err.Error())
+	}
+
+	selectDB, err := r.selectDB(conn.GetDBIndex())
+	if err != nil {
+		return protocol.NewErrReply(err.Error())
+	}
+
+	cmd, ok := commandTable[cmdName]
+	if !ok {
+		return protocol.NewErrReply(COMMAND_NOT_FIND)
+	}
+
+	reply := cmd.exector(selectDB, cmdLine[1:])
 	if reply == nil {
 		return protocol.NewErrReply(EMPTY_REPLY)
 	}

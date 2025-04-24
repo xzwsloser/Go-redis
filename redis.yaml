@@ -6,7 +6,7 @@ Redis:
 # 配置 Log 信息
 Log:
   Stdout: on
-  File: on
+  File: off
   Filename: redis.log
   Color:  off
   Level:  Info

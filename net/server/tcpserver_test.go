@@ -102,3 +102,39 @@ func TestPubSub(t *testing.T) {
 
 	w.Wait()
 }
+
+func TestPreFunc(t *testing.T) {
+	server := NewTcpServer()
+	go server.Run()
+	conn, err := net.Dial("tcp", ":8080")
+	if err != nil {
+		t.Error(err)
+	}
+	command1 := [][]byte{
+		[]byte("SET"),
+		[]byte("k100"),
+		[]byte("v100"),
+	}
+	_, _ = conn.Write(protocol.NewMultiReply(command1).ToByte())
+	buf := make([]byte, 100)
+	n, err := conn.Read(buf)
+	if err != nil {
+		t.Error(err)
+	}
+	log.Println("=====result of the first command=====")
+	log.Print(string(buf[:n]))
+	log.Println("=====end of the first command=====")
+	command2 := [][]byte{
+		[]byte("GET"),
+		[]byte("k100"),
+	}
+	_, _ = conn.Write(protocol.NewMultiReply(command2).ToByte())
+	buf = make([]byte, 100)
+	n, err = conn.Read(buf)
+	if err != nil {
+		t.Error(err)
+	}
+	log.Println("=====result of the second command=====")
+	log.Print(string(buf[:n]))
+	log.Println("=====end of the second command=====")
+}

@@ -18,6 +18,8 @@ const (
 	EXPIRE_PREFIX         = "expire:"
 )
 
+type CmdLine = [][]byte
+
 // Database is the inner memory database of redis
 type Database struct {
 	index int
@@ -42,7 +44,14 @@ func NewDatabase(idx int) *Database {
 	return db
 }
 
+// ExecFunc the core method to invoke by the command
 type ExecFunc func(db *Database, cmdLine [][]byte) redis.Reply
+
+// PreFunc get the key of the command and lock the keys,return write keys and read keys
+type PreFunc func(cmdLine [][]byte) ([]string, []string)
+
+// UndoFunc get the undo logs of the current command
+type UndoFunc func(db *Database, args [][]byte) []CmdLine
 
 func (db *Database) GetEntity(key string) (entity *database.DataEntity, exists bool) {
 	value, exists := db.data.Get(key)
@@ -134,6 +143,14 @@ func (db *Database) UnlockSingleKey(key string) {
 
 func (db *Database) Unlocks(keys []string) {
 	db.lockMap.Unlocks(keys)
+}
+
+func (db *Database) RWLocks(wks []string, rks []string) {
+	db.lockMap.RWLocks(wks, rks)
+}
+
+func (db *Database) RWUnlocks(wks []string, rks []string) {
+	db.lockMap.RWUnlocks(wks, rks)
 }
 
 func (db *Database) ForEach(consumer func(key string, value *database.DataEntity) bool) {
