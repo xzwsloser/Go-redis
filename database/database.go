@@ -14,7 +14,7 @@ import (
 const (
 	DEFAULT_HASH_BUCKETS  = 16
 	DEFAULT_LOCK_KEYS     = 32
-	DEFAULT_TICK_INTERVAL = time.Millisecond * 500
+	DEFAULT_TICK_INTERVAL = time.Millisecond * 100
 	EXPIRE_PREFIX         = "expire:"
 )
 
@@ -170,16 +170,15 @@ func (db *Database) Persister(key string) {
 	db.timeHeap.RemoveTask(expireKey)
 }
 
-func (db *Database) Expire(key string, expireTime time.Duration) redis.Reply {
+func (db *Database) Expire(key string, expireAt time.Time) redis.Reply {
 	expireKey := EXPIRE_PREFIX + key
 	db.LockSingleKey(expireKey)
 	defer db.UnlockSingleKey(expireKey)
-	expire := time.Now().Add(expireTime)
 	if _, ok := db.ttlMap.GetWithLock(expireKey); ok {
 		db.timeHeap.RemoveTask(expireKey)
 	}
-	db.ttlMap.PutWithLock(expireKey, expire)
-	db.timeHeap.AddTask(expire, expireKey, func() {
+	db.ttlMap.PutWithLock(expireKey, expireAt)
+	db.timeHeap.AddTask(expireAt, expireKey, func() {
 		db.Locks([]string{key, expireKey})
 		defer db.Unlocks([]string{key, expireKey})
 		if value, ok := db.ttlMap.Get(expireKey); ok {

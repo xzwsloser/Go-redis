@@ -1,5 +1,14 @@
 package utils
 
+import (
+	"strconv"
+	"time"
+)
+
+var (
+	PEXPIREAT = []byte("PEXPIREAT")
+)
+
 type CmdLine = [][]byte
 
 func CmdLine1(cmdName string, args ...string) CmdLine {
@@ -18,6 +27,16 @@ func CmdLine2(cmdName string, args [][]byte) CmdLine {
 		result[i+1] = arg
 	}
 	return result
+}
+
+func ExpireCmd(key string, expireAt time.Time) CmdLine {
+	args := make([][]byte, 3)
+	args[0] = PEXPIREAT
+	args[1] = []byte(key)
+	timeStamp := expireAt.UnixNano() / 1000000
+	timeStampStr := strconv.FormatInt(timeStamp, 10)
+	args[2] = []byte(timeStampStr)
+	return args
 }
 
 func Equals(v1 any, v2 any) bool {

@@ -18,7 +18,7 @@ func TestZRangeByRank(t *testing.T) {
 		[]byte("4.0"),
 		[]byte("d"),
 	}
-	reply := execZadd(db, cmdLine)
+	reply := execZAdd(db, cmdLine)
 	log.Print(string(reply.ToByte()))
 
 	cmdLine = [][]byte{
@@ -26,7 +26,7 @@ func TestZRangeByRank(t *testing.T) {
 		[]byte("-1"),
 		[]byte("5"),
 	}
-	reply = execZrange(db, cmdLine)
+	reply = execZRange(db, cmdLine)
 	log.Print(string(reply.ToByte()))
 }
 
@@ -43,7 +43,7 @@ func TestZRemByRankRange(t *testing.T) {
 		[]byte("4.0"),
 		[]byte("d"),
 	}
-	reply := execZadd(db, cmdLine)
+	reply := execZAdd(db, cmdLine)
 	log.Print(string(reply.ToByte()))
 
 	cmdLine = [][]byte{

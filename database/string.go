@@ -38,7 +38,6 @@ func init() {
 	RegisterCommand("set", execSet, writeFirstKey, nil, 3)
 	RegisterCommand("setnx", execSetNx, writeFirstKey, nil, 3)
 	RegisterCommand("getset", execGetSet, writeFirstKey, nil, 3)
-	RegisterCommand("del", execDel, writeKeys, nil, -2)
 	RegisterCommand("incr", execIncr, writeFirstKey, nil, 2)
 	RegisterCommand("decr", execDecr, writeFirstKey, nil, 2)
 	RegisterCommand("slen", execSLen, readFirstKey, nil, 2)
@@ -140,14 +139,14 @@ func execGetSet(db *Database, cmdLine [][]byte) redis.Reply {
 }
 
 // DEL  eg DEL a1 a2 a3...
-func execDel(db *Database, cmdLine [][]byte) redis.Reply {
-	keys := bytesToString(cmdLine)
-	for _, key := range keys {
-		db.RemoveEntityWithLock(key)
-	}
-	db.addAof(utils.CmdLine2("DEL", cmdLine))
-	return protocol.NewOkReply()
-}
+//func execDel(db *Database, cmdLine [][]byte) redis.Reply {
+//	keys := bytesToString(cmdLine)
+//	for _, key := range keys {
+//		db.RemoveEntityWithLock(key)
+//	}
+//	db.addAof(utils.CmdLine2("DEL", cmdLine))
+//	return protocol.NewOkReply()
+//}
 
 // Incr eg Incr a1
 func execIncr(db *Database, cmdLine [][]byte) redis.Reply {
@@ -280,8 +279,9 @@ func execSetEx(db *Database, cmdLine [][]byte) redis.Reply {
 
 	if expireTime > 0 {
 		timeout := time.Duration(expireTime) * time.Second
-		db.Expire(key, timeout)
+		expireAt := time.Now().Add(timeout)
+		db.Expire(key, time.Now().Add(timeout))
+		db.addAof(utils.ExpireCmd(key, expireAt))
 	}
-	db.addAof(utils.CmdLine2("SETEX", cmdLine))
 	return protocol.NewIntReply(int64(result))
 }
