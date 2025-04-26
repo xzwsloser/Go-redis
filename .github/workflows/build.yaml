@@ -1,0 +1,14 @@
+name: build     # workflow 的名称
+on:
+  push:  # 触发条件
+    branches: # 设置触发的分支
+      - master
+jobs:
+  build:    # job_id
+    runs-on: ubuntu-latest # 指定运行的操作系统
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2 # 进行代码检查
+      - name: Build project
+        run: |
+          make build
