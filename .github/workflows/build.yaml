@@ -18,4 +18,4 @@ jobs:
         uses: actions/upload-artifact # 保留构建产物
         with:
           name: build-output
-          path: ./build # 可执行文件路径
+          path: ./bin/Go-Redis # 可执行文件路径
