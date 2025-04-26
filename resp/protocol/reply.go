@@ -65,6 +65,10 @@ func (e *ErrReply) ToByte() []byte {
 	return []byte("-" + e.errorMsg + CRLF)
 }
 
+func (e *ErrReply) Error() string {
+	return e.errorMsg
+}
+
 func IsErrReply(reply redis.Reply) bool {
 	return reply.ToByte()[0] == '-'
 }
@@ -157,3 +161,30 @@ type NoReply struct{}
 func NewNoReply() *NoReply { return &NoReply{} }
 
 func (*NoReply) ToByte() []byte { return []byte("") }
+
+type QueuedReply struct{}
+
+func NewQueuedReply() *QueuedReply { return &QueuedReply{} }
+
+func (*QueuedReply) ToByte() []byte {
+	return []byte("+QUEUED\r\n")
+}
+
+type MultiRawReply struct {
+	replies []redis.Reply
+}
+
+func NewMultiRawReply(replies []redis.Reply) *MultiRawReply {
+	return &MultiRawReply{
+		replies: replies,
+	}
+}
+
+func (m *MultiRawReply) ToByte() []byte {
+	var buf bytes.Buffer
+	buf.WriteString("*" + strconv.Itoa(len(m.replies)) + CRLF)
+	for _, reply := range m.replies {
+		buf.Write(reply.ToByte())
+	}
+	return buf.Bytes()
+}

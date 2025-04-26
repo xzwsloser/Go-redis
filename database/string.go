@@ -20,11 +20,6 @@ import (
 	INCR
 	DECR
 	LEN
-
-	TODO:
-	GETEX
-	SETEX
-	PSETEX
 */
 
 const (
@@ -34,16 +29,16 @@ const (
 )
 
 func init() {
-	RegisterCommand("get", execGet, readFirstKey, nil, 2)
-	RegisterCommand("set", execSet, writeFirstKey, nil, 3)
-	RegisterCommand("setnx", execSetNx, writeFirstKey, nil, 3)
-	RegisterCommand("getset", execGetSet, writeFirstKey, nil, 3)
-	RegisterCommand("incr", execIncr, writeFirstKey, nil, 2)
-	RegisterCommand("decr", execDecr, writeFirstKey, nil, 2)
-	RegisterCommand("slen", execSLen, readFirstKey, nil, 2)
-	RegisterCommand("mget", execMGet, readKeys, nil, -2)
-	RegisterCommand("mset", execMSet, prepareMSet, nil, -3)
-	RegisterCommand("setex", execSetEx, writeFirstKey, nil, 4)
+	RegisterCommand("GET", execGet, readFirstKey, nil, 2)
+	RegisterCommand("SET", execSet, writeFirstKey, rollbackFirstKey, 3)
+	RegisterCommand("SETNX", execSetNx, writeFirstKey, rollbackFirstKey, 3)
+	RegisterCommand("GETSET", execGetSet, writeFirstKey, rollbackFirstKey, 3)
+	RegisterCommand("INCR", execIncr, writeFirstKey, rollbackFirstKey, 2)
+	RegisterCommand("DECR", execDecr, writeFirstKey, rollbackFirstKey, 2)
+	RegisterCommand("SLEN", execSLen, readFirstKey, nil, 2)
+	RegisterCommand("MGET", execMGet, readKeys, nil, -2)
+	RegisterCommand("MSET", execMSet, prepareMSet, undoMSet, -3)
+	RegisterCommand("SETEX", execSetEx, writeFirstKey, rollbackFirstKey, 4)
 }
 
 func (db *Database) getAsString(key string) (value []byte, exists bool) {
@@ -231,6 +226,19 @@ func prepareMSet(args [][]byte) ([]string, []string) {
 		i++
 	}
 	return wks, nil
+}
+
+func undoMSet(db *Database, args [][]byte) []CmdLine {
+	if len(args)%2 == 1 {
+		return nil
+	}
+	keys := make([]string, len(args)/2)
+	j := 0
+	for i := 0; i < len(keys); i++ {
+		keys[i] = string(args[j])
+		j += 2
+	}
+	return rollbackGivenKeys(db, keys...)
 }
 
 // MSET MSET k1 v1 k2 v2 ...

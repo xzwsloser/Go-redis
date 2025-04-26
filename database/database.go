@@ -1,13 +1,16 @@
 package database
 
 import (
+	"errors"
 	"github.com/xzwsloser/Go-redis/datastruct/dict"
 	"github.com/xzwsloser/Go-redis/datastruct/lock"
 	"github.com/xzwsloser/Go-redis/interface/database"
 	"github.com/xzwsloser/Go-redis/interface/redis"
 	"github.com/xzwsloser/Go-redis/lib/logger"
 	"github.com/xzwsloser/Go-redis/lib/timeheap"
+	"github.com/xzwsloser/Go-redis/lib/utils"
 	"github.com/xzwsloser/Go-redis/resp/protocol"
+	"strings"
 	"time"
 )
 
@@ -25,20 +28,23 @@ type Database struct {
 	index int
 	data  dict.Dict
 	// key(string) -> expireTime(time.Time)
-	ttlMap   dict.Dict
-	lockMap  *lock.Locks
-	addAof   func(cmdLine [][]byte)
-	timeHeap *timeheap.TimeHeap
+	ttlMap dict.Dict
+	// key(string) -> versionCode
+	versionMap dict.Dict
+	lockMap    *lock.Locks
+	addAof     func(cmdLine [][]byte)
+	timeHeap   *timeheap.TimeHeap
 }
 
 func NewDatabase(idx int) *Database {
 	db := &Database{
-		data:     dict.NewConcurrentDict(DEFAULT_HASH_BUCKETS),
-		ttlMap:   dict.NewConcurrentDict(DEFAULT_LOCK_KEYS),
-		lockMap:  lock.NewLocks(DEFAULT_LOCK_KEYS),
-		addAof:   func(cmdLine [][]byte) {},
-		index:    idx,
-		timeHeap: timeheap.NewTimeHeap(DEFAULT_TICK_INTERVAL),
+		data:       dict.NewConcurrentDict(DEFAULT_HASH_BUCKETS),
+		ttlMap:     dict.NewConcurrentDict(DEFAULT_HASH_BUCKETS),
+		versionMap: dict.NewConcurrentDict(DEFAULT_HASH_BUCKETS),
+		lockMap:    lock.NewLocks(DEFAULT_LOCK_KEYS),
+		addAof:     func(cmdLine [][]byte) {},
+		index:      idx,
+		timeHeap:   timeheap.NewTimeHeap(DEFAULT_TICK_INTERVAL),
 	}
 	db.timeHeap.Start()
 	return db
@@ -170,6 +176,16 @@ func (db *Database) Persister(key string) {
 	db.timeHeap.RemoveTask(expireKey)
 }
 
+func (db *Database) TTLCmd(key string) [][]byte {
+	expireKey := EXPIRE_PREFIX + key
+	value, exists := db.ttlMap.GetWithLock(expireKey)
+	if !exists {
+		return nil
+	}
+	expireAt := time.UnixMilli(value.(int64))
+	return utils.ExpireCmd(key, expireAt)
+}
+
 func (db *Database) Expire(key string, expireAt time.Time) redis.Reply {
 	expireKey := EXPIRE_PREFIX + key
 	db.LockSingleKey(expireKey)
@@ -190,4 +206,113 @@ func (db *Database) Expire(key string, expireAt time.Time) redis.Reply {
 		db.ttlMap.RemoveWithLock(expireKey)
 	})
 	return protocol.NewOkReply()
+}
+
+func (db *Database) GetVersion(key string) uint32 {
+	versionCode, exists := db.versionMap.GetWithLock(key)
+	if !exists {
+		return 0
+	}
+	return versionCode.(uint32)
+}
+
+func (db *Database) AddVersion(keys ...string) {
+	if keys == nil {
+		return
+	}
+
+	for _, key := range keys {
+		versionCode := db.GetVersion(key)
+		db.versionMap.PutWithLock(key, versionCode+1)
+	}
+}
+
+func (db *Database) Exec(conn redis.Conn, cmdLine [][]byte) redis.Reply {
+	cmdName := strings.ToLower(string(cmdLine[0]))
+	if cmdName == "multi" {
+		if len(cmdLine) != 1 {
+			return protocol.NewErrReply("args of multi err")
+		}
+		return StartMulti(conn)
+	} else if cmdName == "exec" {
+		if len(cmdLine) != 1 {
+			return protocol.NewErrReply("args of the exec err")
+		}
+		return ExecMulti(db, conn)
+	} else if cmdName == "watch" {
+		if len(cmdLine) < 2 {
+			return protocol.NewErrReply("args of the watch err")
+		}
+		return Watch(db, conn, cmdLine[1:])
+	} else if cmdName == "discard" {
+		if len(cmdLine) != 1 {
+			return protocol.NewErrReply("args of discard err")
+		}
+		return DiscardMulti(db, conn)
+	}
+
+	if conn != nil && conn.InitMulti() {
+		return EnqueueCmd(conn, cmdLine)
+	}
+
+	if validCommand(cmdLine) != nil {
+		return protocol.NewErrReply("in valid command")
+	}
+
+	return db.execNormalCommand(conn, cmdLine)
+}
+
+func (db *Database) execNormalCommand(conn redis.Conn, cmdLine [][]byte) redis.Reply {
+	cmdName := strings.ToLower(string(cmdLine[0]))
+	cmd, ok := commandTable[cmdName]
+	if !ok {
+		return protocol.NewErrReply(COMMAND_NOT_FIND)
+	}
+
+	prepare := cmd.prepare
+	if prepare != nil {
+		wks, rks := prepare(cmdLine[1:])
+		db.RWLocks(wks, rks)
+		defer db.RWUnlocks(wks, rks)
+		db.AddVersion(wks...)
+	}
+
+	reply := cmd.exector(db, cmdLine[1:])
+	if reply == nil {
+		return protocol.NewErrReply(EMPTY_REPLY)
+	}
+	return reply
+}
+
+func (db *Database) execWithLock(conn redis.Conn, cmdLine [][]byte) redis.Reply {
+	cmdName := strings.ToLower(string(cmdLine[0]))
+	cmd, ok := commandTable[cmdName]
+	if !ok {
+		return protocol.NewErrReply(COMMAND_NOT_FIND)
+	}
+
+	reply := cmd.exector(db, cmdLine[1:])
+	if reply == nil {
+		return protocol.NewErrReply(EMPTY_REPLY)
+	}
+	return reply
+}
+
+func validCommand(commandLine [][]byte) error {
+	commandName := strings.ToLower(string(commandLine[0]))
+	commandInfo, exists := commandTable[commandName]
+	if !exists {
+		return errors.New(COMMAND_NOT_FIND)
+	}
+
+	if commandInfo.arity < 0 {
+		if len(commandLine) < -commandInfo.arity {
+			return errors.New(ARGS_OF_COMMAND_ERR)
+		}
+	} else {
+		if len(commandLine) != commandInfo.arity {
+			return errors.New(ARGS_OF_COMMAND_ERR)
+		}
+	}
+	return nil
 }

@@ -92,61 +92,11 @@ func (r *RedisServer) Exec(conn redis.Conn, cmdLine [][]byte) redis.Reply {
 		return r.hub.Publish(cmdLine[1:])
 	}
 
-	return r.execNormalCommand(conn, cmdLine)
-}
-
-func (r *RedisServer) execNormalCommand(conn redis.Conn, cmdLine [][]byte) redis.Reply {
-	cmdName := strings.ToLower(string(cmdLine[0]))
-	err := validCommand(cmdLine)
-	if err != nil {
-		return protocol.NewErrReply(err.Error())
-	}
-
 	selectDB, err := r.selectDB(conn.GetDBIndex())
 	if err != nil {
 		return protocol.NewErrReply(err.Error())
 	}
-
-	cmd, ok := commandTable[cmdName]
-	if !ok {
-		return protocol.NewErrReply(COMMAND_NOT_FIND)
-	}
-
-	prepare := cmd.prepare
-	if prepare != nil {
-		wks, rks := prepare(cmdLine[1:])
-		selectDB.RWLocks(wks, rks)
-		defer selectDB.RWUnlocks(wks, rks)
-	}
-	reply := cmd.exector(selectDB, cmdLine[1:])
-	if reply == nil {
-		return protocol.NewErrReply(EMPTY_REPLY)
-	}
-	return reply
-}
-
-func (r *RedisServer) execWithLock(conn redis.Conn, cmdLine [][]byte) redis.Reply {
-	cmdName := string(cmdLine[0])
-	err := validCommand(cmdLine)
-	if err != nil {
-		return protocol.NewErrReply(err.Error())
-	}
-
-	selectDB, err := r.selectDB(conn.GetDBIndex())
-	if err != nil {
-		return protocol.NewErrReply(err.Error())
-	}
-
-	cmd, ok := commandTable[cmdName]
-	if !ok {
-		return protocol.NewErrReply(COMMAND_NOT_FIND)
-	}
-
-	reply := cmd.exector(selectDB, cmdLine[1:])
-	if reply == nil {
-		return protocol.NewErrReply(EMPTY_REPLY)
-	}
-	return reply
+	return selectDB.Exec(conn, cmdLine)
 }
 
 func (r *RedisServer) Close() {
@@ -157,25 +107,6 @@ func (r *RedisServer) Close() {
 
 func (r *RedisServer) AfterClientClose(conn redis.Conn) {
 	r.hub.UnSubscribeAll(conn)
-}
-
-func validCommand(commandLine [][]byte) error {
-	commandName := strings.ToLower(string(commandLine[0]))
-	commandInfo, exists := commandTable[commandName]
-	if !exists {
-		return errors.New(COMMAND_NOT_FIND)
-	}
-
-	if commandInfo.arity < 0 {
-		if len(commandLine) < -commandInfo.arity {
-			return errors.New(ARGS_OF_COMMAND_ERR)
-		}
-	} else {
-		if len(commandLine) != commandInfo.arity {
-			return errors.New(ARGS_OF_COMMAND_ERR)
-		}
-	}
-	return nil
 }
 
 func (s *RedisServer) selectDB(index int) (*Database, error) {

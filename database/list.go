@@ -11,11 +11,11 @@ import (
 func init() {
 	RegisterCommand("LINDEX", execLIndex, readFirstKey, nil, 3)
 	RegisterCommand("LLEN", execLen, readFirstKey, nil, 2)
-	RegisterCommand("LPOP", execLPop, writeFirstKey, nil, 2)
-	RegisterCommand("LPUSH", execLPush, writeFirstKey, nil, -3)
-	RegisterCommand("RPOP", execRPop, writeFirstKey, nil, 2)
-	RegisterCommand("RPUSH", execRPush, writeFirstKey, nil, -3)
-	RegisterCommand("LREM", execLRem, writeFirstKey, nil, 4)
+	RegisterCommand("LPOP", execLPop, writeFirstKey, rollbackFirstKey, 2)
+	RegisterCommand("LPUSH", execLPush, writeFirstKey, rollbackFirstKey, -3)
+	RegisterCommand("RPOP", execRPop, writeFirstKey, rollbackFirstKey, 2)
+	RegisterCommand("RPUSH", execRPush, writeFirstKey, rollbackFirstKey, -3)
+	RegisterCommand("LREM", execLRem, writeFirstKey, rollbackFirstKey, 4)
 	RegisterCommand("LRANGE", execLRange, readFirstKey, nil, 4)
 }
 

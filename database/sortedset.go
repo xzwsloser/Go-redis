@@ -14,16 +14,16 @@ import (
 */
 
 func init() {
-	RegisterCommand("ZADD", execZAdd, writeFirstKey, nil, -4)
+	RegisterCommand("ZADD", execZAdd, writeFirstKey, rollbackFirstKey, -4)
 	RegisterCommand("ZCARD", execZCard, readFirstKey, nil, 2)
 	RegisterCommand("ZCOUNT", execZCount, readFirstKey, nil, 4)
-	RegisterCommand("ZINCRBY", execZIncrBy, writeFirstKey, nil, 4)
+	RegisterCommand("ZINCRBY", execZIncrBy, writeFirstKey, rollbackFirstKey, 4)
 	RegisterCommand("ZRANK", execZRank, readFirstKey, nil, 3)
 	RegisterCommand("ZSCORE", execZScore, readFirstKey, nil, 3)
 	RegisterCommand("ZRANGE", execZRange, readFirstKey, nil, 4)
-	RegisterCommand("ZREM", execZRem, writeFirstKey, nil, -3)
+	RegisterCommand("ZREM", execZRem, writeFirstKey, rollbackFirstKey, -3)
 	RegisterCommand("ZRANGEBYSCORE", execZRangeByScore, readFirstKey, nil, 4)
-	RegisterCommand("ZREMRANGEBYRANK", execZRemRangeByRank, writeFirstKey, nil, 4)
+	RegisterCommand("ZREMRANGEBYRANK", execZRemRangeByRank, writeFirstKey, rollbackFirstKey, 4)
 }
 
 func (db *Database) getOrInitSortedSet(key string) *sortedset.SortedSet {

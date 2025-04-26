@@ -11,4 +11,12 @@ type Conn interface {
 	UnSubscribe(channel string) bool
 	GetChannel() []string
 	SubsCount() int
+	GetWatching() map[string]uint32
+	InitMulti() bool
+	SetMulti(bool)
+	EnqueueCmd([][]byte)
+	GetCmdLineInQueue() [][][]byte
+	ClearCmdQueue()
+	AddTxErrors(err error)
+	GetTxErrors() []error
 }

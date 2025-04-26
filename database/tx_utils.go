@@ -1,5 +1,10 @@
 package database
 
+import (
+	"github.com/xzwsloser/Go-redis/aof"
+	"github.com/xzwsloser/Go-redis/lib/utils"
+)
+
 // writeFirstKey: get the key of the write command  example: set k1 v1
 func writeFirstKey(args [][]byte) ([]string, []string) {
 	key := string(args[0])
@@ -28,4 +33,26 @@ func readKeys(args [][]byte) ([]string, []string) {
 		rks[i] = string(arg)
 	}
 	return nil, rks
+}
+
+func rollbackFirstKey(db *Database, args [][]byte) []CmdLine {
+	key := string(args[0])
+	return rollbackGivenKeys(db, key)
+}
+
+func rollbackGivenKeys(db *Database, keys ...string) []CmdLine {
+	undoCmdLine := make([][][]byte, 0)
+	for _, key := range keys {
+		entity, exists := db.GetEntityWithLock(key)
+		if !exists {
+			undoCmdLine = append(undoCmdLine,
+				utils.CmdLine1("DEL", key))
+		} else {
+			undoCmdLine = append(undoCmdLine,
+				utils.CmdLine1("DEL", key),
+				aof.EntityToCmd(key, entity),
+				db.TTLCmd(key))
+		}
+	}
+	return undoCmdLine
 }

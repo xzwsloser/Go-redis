@@ -132,3 +132,17 @@ func (s *SortedSet) RemByRankRange(start int64, stop int64) (result int64) {
 	result = int64(len(elements))
 	return result
 }
+
+func (s *SortedSet) ForEach(consumer func(score float64, member string) bool) {
+	if s.Len() == 0 {
+		return
+	}
+	ptr := s.skiplist.header
+	ptr = ptr.level[0].next
+	for ptr != nil {
+		if !consumer(ptr.Score, ptr.Member) {
+			break
+		}
+		ptr = ptr.level[0].next
+	}
+}
