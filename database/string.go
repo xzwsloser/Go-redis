@@ -101,8 +101,13 @@ func execSet(db *Database, cmdLine [][]byte) redis.Reply {
 		Data: value,
 	})
 	db.addAof(utils.CmdLine2("SET", cmdLine))
-	db.Persister(key)
-	return protocol.NewIntReply(int64(result))
+	if db.IsTTLKey(key) {
+		db.Persister(key)
+	}
+	if result > 0 {
+		return protocol.NewOkReply()
+	}
+	return protocol.NewNullBulkReply()
 }
 
 // SETNX eg SETNX "k1" "v1"

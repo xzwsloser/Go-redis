@@ -5,6 +5,7 @@ import (
 	"github.com/xzwsloser/Go-redis/lib/wildcard"
 	"math"
 	"math/rand"
+	"sort"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -460,4 +461,63 @@ func (d *ConcurrentDict) DictScan(cursor int, count int, pattern string) ([][]by
 	}
 
 	return result, 0
+}
+
+func (dict *ConcurrentDict) toLockIndices(keys []string, reverse bool) []uint32 {
+	indexMap := make(map[uint32]struct{})
+	for _, key := range keys {
+		index := dict.spread(key)
+		indexMap[index] = struct{}{}
+	}
+	indices := make([]uint32, 0, len(indexMap))
+	for index := range indexMap {
+		indices = append(indices, index)
+	}
+	sort.Slice(indices, func(i, j int) bool {
+		if !reverse {
+			return indices[i] < indices[j]
+		}
+		return indices[i] > indices[j]
+	})
+	return indices
+}
+
+// RWLocks locks write keys and read keys together. allow duplicate keys
+func (dict *ConcurrentDict) RWLocks(writeKeys []string, readKeys []string) {
+	keys := append(writeKeys, readKeys...)
+	indices := dict.toLockIndices(keys, false)
+	writeIndexSet := make(map[uint32]struct{})
+	for _, wKey := range writeKeys {
+		idx := dict.spread(wKey)
+		writeIndexSet[idx] = struct{}{}
+	}
+	for _, index := range indices {
+		_, w := writeIndexSet[index]
+		mu := &dict.table[index].lock
+		if w {
+			mu.Lock()
+		} else {
+			mu.RLock()
+		}
+	}
+}
+
+// RWUnLocks unlocks write keys and read keys together. allow duplicate keys
+func (dict *ConcurrentDict) RWUnLocks(writeKeys []string, readKeys []string) {
+	keys := append(writeKeys, readKeys...)
+	indices := dict.toLockIndices(keys, true)
+	writeIndexSet := make(map[uint32]struct{})
+	for _, wKey := range writeKeys {
+		idx := dict.spread(wKey)
+		writeIndexSet[idx] = struct{}{}
+	}
+	for _, index := range indices {
+		_, w := writeIndexSet[index]
+		mu := &dict.table[index].lock
+		if w {
+			mu.Unlock()
+		} else {
+			mu.RUnlock()
+		}
+	}
 }

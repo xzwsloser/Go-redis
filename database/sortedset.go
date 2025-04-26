@@ -4,6 +4,7 @@ import (
 	"github.com/xzwsloser/Go-redis/datastruct/sortedset"
 	"github.com/xzwsloser/Go-redis/interface/database"
 	"github.com/xzwsloser/Go-redis/interface/redis"
+	"github.com/xzwsloser/Go-redis/lib/utils"
 	"github.com/xzwsloser/Go-redis/resp/protocol"
 	"strconv"
 )
@@ -72,6 +73,8 @@ func execZAdd(db *Database, cmdLine [][]byte) redis.Reply {
 	for _, element := range elements {
 		result += ss.Put(element.Member, element.Score)
 	}
+
+	db.addAof(utils.CmdLine2("ZADD", cmdLine))
 	return protocol.NewIntReply(int64(result))
 }
 
@@ -118,6 +121,7 @@ func execZIncrBy(db *Database, cmdLine [][]byte) redis.Reply {
 	}
 	element.Score += increment
 	result := ss.Put(element.Member, element.Score)
+	db.addAof(utils.CmdLine2("ZINCRBY", cmdLine))
 	return protocol.NewIntReply(int64(result))
 }
 
@@ -181,6 +185,7 @@ func execZRem(db *Database, cmdLine [][]byte) redis.Reply {
 	for _, member := range members {
 		result += ss.Remove(member)
 	}
+	db.addAof(utils.CmdLine2("ZREM", cmdLine))
 	return protocol.NewIntReply(result)
 }
 
@@ -223,5 +228,6 @@ func execZRemRangeByRank(db *Database, cmdLine [][]byte) redis.Reply {
 	}
 	ss := db.getOrInitSortedSet(key)
 	result := ss.RemByRankRange(start, stop)
+	db.addAof(utils.CmdLine2("ZREMRANGEBYRANK", cmdLine))
 	return protocol.NewIntReply(result)
 }

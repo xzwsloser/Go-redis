@@ -188,3 +188,17 @@ func (m *MultiRawReply) ToByte() []byte {
 	}
 	return buf.Bytes()
 }
+
+var nullBulkBytes = []byte("$-1\r\n")
+
+// NullBulkReply is empty string
+type NullBulkReply struct{}
+
+// ToBytes marshal redis.Reply
+func (r *NullBulkReply) ToByte() []byte {
+	return nullBulkBytes
+}
+
+func NewNullBulkReply() *NullBulkReply {
+	return &NullBulkReply{}
+}

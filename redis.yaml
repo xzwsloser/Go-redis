@@ -20,4 +20,4 @@ Aof:
   Load: on
   AppendOnly: on
   AppendFileName: appendonly.aof
-  AppendFileSync: always
+  AppendFileSync: everysec

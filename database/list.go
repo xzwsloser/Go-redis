@@ -71,7 +71,7 @@ func execLPop(db *Database, cmdLine [][]byte) redis.Reply {
 	if value == nil {
 		return protocol.NewBulkReply([]byte("nil"))
 	}
-	return protocol.NewIntReply(int64(value.(int)))
+	return protocol.NewBulkReply([]byte(value.(string)))
 }
 
 // LPUSH list v1 v2 v3 ...

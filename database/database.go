@@ -3,7 +3,6 @@ package database
 import (
 	"errors"
 	"github.com/xzwsloser/Go-redis/datastruct/dict"
-	"github.com/xzwsloser/Go-redis/datastruct/lock"
 	"github.com/xzwsloser/Go-redis/interface/database"
 	"github.com/xzwsloser/Go-redis/interface/redis"
 	"github.com/xzwsloser/Go-redis/lib/logger"
@@ -15,8 +14,8 @@ import (
 )
 
 const (
-	DEFAULT_HASH_BUCKETS  = 16
-	DEFAULT_LOCK_KEYS     = 32
+	DEFAULT_HASH_BUCKETS = 1 << 16
+	//DEFAULT_LOCK_KEYS     = 1 << 16
 	DEFAULT_TICK_INTERVAL = time.Millisecond * 100
 	EXPIRE_PREFIX         = "expire:"
 )
@@ -26,14 +25,14 @@ type CmdLine = [][]byte
 // Database is the inner memory database of redis
 type Database struct {
 	index int
-	data  dict.Dict
+	data  *dict.ConcurrentDict
 	// key(string) -> expireTime(time.Time)
-	ttlMap dict.Dict
+	ttlMap *dict.ConcurrentDict
 	// key(string) -> versionCode
-	versionMap dict.Dict
-	lockMap    *lock.Locks
-	addAof     func(cmdLine [][]byte)
-	timeHeap   *timeheap.TimeHeap
+	versionMap *dict.ConcurrentDict
+	//lockMap    *lock.Locks
+	addAof   func(cmdLine [][]byte)
+	timeHeap *timeheap.TimeHeap
 }
 
 func NewDatabase(idx int) *Database {
@@ -41,10 +40,10 @@ func NewDatabase(idx int) *Database {
 		data:       dict.NewConcurrentDict(DEFAULT_HASH_BUCKETS),
 		ttlMap:     dict.NewConcurrentDict(DEFAULT_HASH_BUCKETS),
 		versionMap: dict.NewConcurrentDict(DEFAULT_HASH_BUCKETS),
-		lockMap:    lock.NewLocks(DEFAULT_LOCK_KEYS),
-		addAof:     func(cmdLine [][]byte) {},
-		index:      idx,
-		timeHeap:   timeheap.NewTimeHeap(DEFAULT_TICK_INTERVAL),
+		//lockMap:    lock.NewLocks(DEFAULT_LOCK_KEYS),
+		addAof:   func(cmdLine [][]byte) {},
+		index:    idx,
+		timeHeap: timeheap.NewTimeHeap(DEFAULT_TICK_INTERVAL),
 	}
 	db.timeHeap.Start()
 	return db
@@ -135,28 +134,28 @@ func (db *Database) RemoveEntityWithLock(key string) (entity *database.DataEntit
 	return
 }
 
-func (db *Database) LockSingleKey(key string) {
-	db.lockMap.Locks([]string{key})
-}
-
-func (db *Database) Locks(keys []string) {
-	db.lockMap.Locks(keys)
-}
-
-func (db *Database) UnlockSingleKey(key string) {
-	db.lockMap.Unlocks([]string{key})
-}
-
-func (db *Database) Unlocks(keys []string) {
-	db.lockMap.Unlocks(keys)
-}
+//func (db *Database) LockSingleKey(key string) {
+//	db.lockMap.Locks([]string{key})
+//}
+//
+//func (db *Database) Locks(keys []string) {
+//	db.lockMap.Locks(keys)
+//}
+//
+//func (db *Database) UnlockSingleKey(key string) {
+//	db.lockMap.Unlocks([]string{key})
+//}
+//
+//func (db *Database) Unlocks(keys []string) {
+//	db.lockMap.Unlocks(keys)
+//}
 
 func (db *Database) RWLocks(wks []string, rks []string) {
-	db.lockMap.RWLocks(wks, rks)
+	db.data.RWLocks(wks, rks)
 }
 
 func (db *Database) RWUnlocks(wks []string, rks []string) {
-	db.lockMap.RWUnlocks(wks, rks)
+	db.data.RWUnLocks(wks, rks)
 }
 
 func (db *Database) ForEach(consumer func(key string, value *database.DataEntity) bool) {
@@ -176,6 +175,12 @@ func (db *Database) Persister(key string) {
 	db.timeHeap.RemoveTask(expireKey)
 }
 
+func (db *Database) IsTTLKey(key string) bool {
+	expireKey := EXPIRE_PREFIX + key
+	_, exists := db.ttlMap.GetWithLock(expireKey)
+	return exists
+}
+
 func (db *Database) TTLCmd(key string) [][]byte {
 	expireKey := EXPIRE_PREFIX + key
 	value, exists := db.ttlMap.GetWithLock(expireKey)
@@ -188,15 +193,20 @@ func (db *Database) TTLCmd(key string) [][]byte {
 
 func (db *Database) Expire(key string, expireAt time.Time) redis.Reply {
 	expireKey := EXPIRE_PREFIX + key
-	db.LockSingleKey(expireKey)
-	defer db.UnlockSingleKey(expireKey)
+	db.ttlMap.RWLocks([]string{expireKey}, nil)
+	defer db.ttlMap.RWUnLocks([]string{expireKey}, nil)
 	if _, ok := db.ttlMap.GetWithLock(expireKey); ok {
 		db.timeHeap.RemoveTask(expireKey)
 	}
 	db.ttlMap.PutWithLock(expireKey, expireAt)
 	db.timeHeap.AddTask(expireAt, expireKey, func() {
-		db.Locks([]string{key, expireKey})
-		defer db.Unlocks([]string{key, expireKey})
+		db.data.RWLocks([]string{key}, nil)
+		db.ttlMap.RWLocks([]string{expireKey}, nil)
+		defer func() {
+			db.data.RWUnLocks([]string{key}, nil)
+			db.ttlMap.RWUnLocks([]string{expireKey}, nil)
+		}()
+
 		if value, ok := db.ttlMap.Get(expireKey); ok {
 			timeToExpire := value.(time.Time)
 			if time.Now().After(timeToExpire) {
