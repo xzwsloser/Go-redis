@@ -15,7 +15,7 @@ jobs:
           echo "WorkSpace after build:"
           ls -R
       - name: Save build output
-        uses: actions/upload-artifact@v2 # 保留构建产物
+        uses: actions/upload-artifact@v3 # 保留构建产物
         with:
           name: build-output
           path: ./build # 可执行文件路径
