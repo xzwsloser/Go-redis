@@ -30,13 +30,25 @@ clean:
 	@rm -rf $(PROJECTBIN)/*
 depend:
 	go mod download
-
+# 构建并且运行 docker 容器
+docker_run: docker_build
+	sudo docker run -d --name go-redis -p 6399:6399 go-redis
+# 构建 docker 镜像
+docker_build: build
+	sudo docker build -t go-redis .
+# 删除 docker 容器并且删除镜像
+docker_rm:
+	-@sudo docker kill go-redis
+	-@sudo docker rm go-redis
+	-@sudo docker rmi go-redis
 help:
-	@echo "make build: 		构建项目"
-	@echo "make fmt:   		格式化代码"
-	@echo "make vet:   		静态代码分析"
-	@echo "make clean: 		清除构建目标"
-	@echo "make depend:  	下载依赖到本地缓存"
+	@echo "make build: 			构建项目"
+	@echo "make fmt:   			格式化代码"
+	@echo "make vet:   			静态代码分析"
+	@echo "make clean: 			清除构建目标"
+	@echo "make depend:  		下载依赖到本地缓存"
+	@echo "make docker_run: 	构建镜像并且启动容器"
+	@echo "make docker_build: 	构建镜像"
+	@echo "make docker_rm:      删除容器和镜像"
 
 .PHONY: fmt clean vet
-

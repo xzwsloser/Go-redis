@@ -10,6 +10,23 @@
 
 ## 基本使用
 > 可以直接使用 `redis-cli` 工具连接到目标数据库,并且进行相应的操作
+### 构建方式
+- 可以直接利用 `MakeFile` 构建:
+```shell
+make build
+```
+- 同时也可使用 `Dockerfile` 构建(该命令会创建一个镜像并且运行容器):
+```shell
+make docker_run
+```
+同时可以使用如下命令删除镜像和容器:
+```shell
+make docker_rm
+```
+更多功能可以利用如下命令查看:
+```shell
+make help
+```
 ### 配置文件
 配置文件为项目根目录下的 `redis.yaml`,配置文件实例如下,可以对其中的选项进行修改:
 ```yaml
