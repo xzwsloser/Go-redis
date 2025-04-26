@@ -15,7 +15,7 @@ jobs:
           echo "WorkSpace after build:"
           ls -R
       - name: Save build output
-        uses: actions/upload-artifact # 保留构建产物
+        uses: actions/upload-artifact@v4 # 保留构建产物
         with:
           name: build-output
           path: ./bin/Go-Redis # 可执行文件路径
